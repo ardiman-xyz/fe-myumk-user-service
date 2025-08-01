@@ -41,16 +41,7 @@ const menuSections: MenuSection[] = [
   {
     label: "Master Data",
     items: [
-      {
-        title: "Program",
-        url: "/programs",
-        icon: SwatchBook,
-      },
-      {
-        title: "Lokasi",
-        url: "/places",
-        icon: MapPin,
-      },
+  
       {
         title: "Users",
         url: "/users",
@@ -58,34 +49,7 @@ const menuSections: MenuSection[] = [
       },
     ],
   },
-  {
-    label: "Kegiatan",
-    items: [
-     
-      {
-        title: "Pendaftar Program",
-        url: "/register/list",
-        icon: Users,
-      },
-       {
-        title: "Bimbingan",
-        url: "/guidance",
-        icon: UsersRound,
-      },
-      
-    ],
-  },
-  {
-    label: "Pengaturan",
-    items: [
-      {
-        title: "Pendaftaran",
-        url: "settings/guidance",
-        icon: Settings,
-      },
-      
-    ],
-  },
+  
 ];
 
 interface MenuSectionProps {
