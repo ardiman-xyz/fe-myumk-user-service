@@ -14,12 +14,15 @@ import {
 import {
   LayoutDashboard,
   Users,
-  type LucideIcon,
-  SwatchBook,
-  MapPin,
-  UsersRound,
+  Shield,
+  Building,
+  Key,
+  Menu as MenuIcon,
+  Activity,
   Settings,
- 
+  UserCheck,
+  UserCog,
+  type LucideIcon,
 } from "lucide-react";
 import type { JSX } from "react";
 import { useAuth } from "@/context/AuthProvider";
@@ -39,17 +42,65 @@ interface MenuSection {
 
 const menuSections: MenuSection[] = [
   {
-    label: "Master Data",
+    label: "User Management",
     items: [
-  
       {
         title: "Users",
         url: "/users",
         icon: Users,
       },
+      {
+        title: "User Roles",
+        url: "/user-roles",
+        icon: UserCheck,
+      },
+      {
+        title: "Role Assignment",
+        url: "/role-assignment",
+        icon: UserCog,
+      },
     ],
   },
-  
+  {
+    label: "Access Control",
+    items: [
+      {
+        title: "Roles",
+        url: "/roles",
+        icon: Shield,
+      },
+      {
+        title: "Permissions",
+        url: "/permissions",
+        icon: Key,
+      },
+      {
+        title: "Menu Management",
+        url: "/menus",
+        icon: MenuIcon,
+      },
+    ],
+  },
+  {
+    label: "System Management",
+    items: [
+      {
+        title: "Applications",
+        url: "/applications",
+        icon: Building,
+      },
+      {
+        title: "Activity Logs",
+        url: "/activity-logs",
+        icon: Activity,
+      },
+      {
+        title: "System Settings",
+        url: "/settings",
+        icon: Settings,
+      },
+    ],
+  },
 ];
 
 interface MenuSectionProps {
@@ -88,9 +139,9 @@ export function AppSidebar(): JSX.Element | null {
       <SidebarHeader>
         <div className="flex items-center gap-2 px-4 py-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">ODS</span>
+            <span className="text-white font-bold text-sm">US</span>
           </div>
-          <span className="text-lg font-semibold">ODS System</span>
+          <span className="text-lg font-semibold">User Service</span>
         </div>
       </SidebarHeader>
 
