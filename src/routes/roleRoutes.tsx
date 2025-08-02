@@ -36,14 +36,6 @@ export const roleRoutes: RouteObject[] = [
           </Suspense>
         ),
       },
-      {
-        path: ":id/edit",
-        element: (
-          <Suspense fallback={<RolesPageLoader />}>
-            <EditUserPage />
-          </Suspense>
-        ),
-      },
     ],
   },
 ];

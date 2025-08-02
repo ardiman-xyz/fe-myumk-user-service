@@ -1,3 +1,4 @@
+import ApplicationCreate from "@/pages/application/ApplicationCreate";
 import { Loader } from "lucide-react";
 import { lazy, Suspense } from "react";
 import type { RouteObject } from "react-router";
@@ -24,6 +25,15 @@ export const applicationRoutes: RouteObject[] = [
         element: (
           <Suspense fallback={<ApplicationPageLoader />}>
             <ApplicationList />
+          </Suspense>
+        ),
+      },
+
+      {
+        path: "create",
+        element: (
+          <Suspense fallback={<ApplicationPageLoader />}>
+            <ApplicationCreate />
           </Suspense>
         ),
       },
