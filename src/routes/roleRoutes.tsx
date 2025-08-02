@@ -1,56 +1,49 @@
+import AddRolePage from "@/pages/roles/AddRolePage";
 import EditUserPage from "@/pages/users/EditUserPage";
 import UserCreate from "@/pages/users/UserCreate";
 import { Loader } from "lucide-react";
 import { lazy, Suspense } from "react";
 import type { RouteObject } from "react-router";
 
-const UserList = lazy(() => import("@/pages/users/UserList"));
+const RoleList = lazy(() => import("@/pages/roles/RolesList"));
 
-const UserPageLoader = () => (
+const RolesPageLoader = () => (
   <div className="flex items-center justify-center p-8">
     <div className="flex items-center space-x-2">
       <Loader className="animate spin-in" />
-      <span className="text-gray-600">Loading users...</span>
+      <span className="text-gray-600">Loading roles...</span>
     </div>
   </div>
 );
 
-export const userRoutes: RouteObject[] = [
+export const roleRoutes: RouteObject[] = [
   {
-    path: "users",
+    path: "roles",
     children: [
       {
         index: true,
         element: (
-          <Suspense fallback={<UserPageLoader />}>
-            <UserList />
+          <Suspense fallback={<RolesPageLoader />}>
+            <RoleList />
           </Suspense>
         ),
       },
       {
         path: "create",
         element: (
-          <Suspense fallback={<UserPageLoader />}>
-            <UserCreate />
+          <Suspense fallback={<RolesPageLoader />}>
+            <AddRolePage />
           </Suspense>
         ),
       },
       {
         path: ":id/edit",
         element: (
-          <Suspense fallback={<UserPageLoader />}>
+          <Suspense fallback={<RolesPageLoader />}>
             <EditUserPage />
           </Suspense>
         ),
       },
-      // {
-      //   path: ':id/edit',
-      //   element: (
-      //     <Suspense fallback={<UserPageLoader />}>
-      //       <UserEdit />
-      //     </Suspense>
-      //   ),
-      // },
     ],
   },
 ];

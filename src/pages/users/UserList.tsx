@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
-import { useTitle } from '@/hooks/useTitle';
-import { toast } from 'sonner';
-import { userService, type User, type UserFilters } from '@/services/userService';
-import UserListHeader from './_components/UserListHeader';
-import UserListFilters from './_components/UserListFilters';
-import UserListTable from './_components/UserListTable';
-import UserListPagination from './_components/UserListPagination';
-import ResetPasswordModal from './_components/ResetPasswordModal';
-import UserDeleteModal from './_components/UserDeleteModal';
-
-
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
+import { useTitle } from "@/hooks/useTitle";
+import { toast } from "sonner";
+import {
+  userService,
+  type User,
+  type UserFilters,
+} from "@/services/userService";
+import UserListHeader from "./_components/UserListHeader";
+import UserListFilters from "./_components/UserListFilters";
+import UserListTable from "./_components/UserListTable";
+import UserListPagination from "./_components/UserListPagination";
+import ResetPasswordModal from "./_components/ResetPasswordModal";
+import UserDeleteModal from "./_components/UserDeleteModal";
 
 interface PaginationData {
   current_page: number;
@@ -23,7 +25,7 @@ interface PaginationData {
 }
 
 const UserListMain: React.FC = () => {
-  useTitle('Users - User Service');
+  useTitle("Users - User Service");
   const navigate = useNavigate();
 
   // State management
@@ -31,12 +33,12 @@ const UserListMain: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
-   const [deleteUser, setDeleteUser] = useState<User | null>(null);
+  const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [filters, setFilters] = useState<UserFilters>({
-    search: '',
-    status: '',
-    sort_by: 'created_at',
-    sort_order: 'desc',
+    search: "",
+    status: "",
+    sort_by: "created_at",
+    sort_order: "desc",
     per_page: 15,
     page: 1,
   });
@@ -63,12 +65,12 @@ const UserListMain: React.FC = () => {
           setPagination(response.meta.pagination);
         }
       } else {
-        toast.error(response.message || 'Failed to load users');
+        toast.error(response.message || "Failed to load users");
         setUsers([]);
       }
     } catch (error: any) {
-      toast.error(error.message || 'Failed to load users');
-      console.error('Error loading users:', error);
+      toast.error(error.message || "Failed to load users");
+      console.error("Error loading users:", error);
       setUsers([]);
     } finally {
       setLoading(false);
@@ -100,9 +102,9 @@ const UserListMain: React.FC = () => {
 
   // Handle user selection
   const handleSelectUser = (userId: number) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
-        ? prev.filter(id => id !== userId)
+    setSelectedUsers((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
         : [...prev, userId]
     );
   };
@@ -111,50 +113,54 @@ const UserListMain: React.FC = () => {
     if (selectedUsers.length === users.length) {
       setSelectedUsers([]);
     } else {
-      setSelectedUsers(users.map(user => user.id));
+      setSelectedUsers(users.map((user) => user.id));
     }
   };
 
   // Handle user actions
   const handleUserAction = async (action: string, userId: number) => {
-    const user = users.find(u => u.id === userId);
+    const user = users.find((u) => u.id === userId);
     if (!user) return;
 
     try {
       switch (action) {
-        case 'view':
+        case "view":
           navigate(`/users/${userId}`);
           break;
-          
-        case 'edit':
+
+        case "edit":
           navigate(`/users/${userId}/edit`);
           break;
-          
-        case 'toggle-status':
+
+        case "toggle-status":
           const response = await userService.toggleUserStatus(userId);
           if (response.success) {
-            toast.success(`User ${user.is_active ? 'deactivated' : 'activated'} successfully`);
+            toast.success(
+              `User ${
+                user.is_active ? "deactivated" : "activated"
+              } successfully`
+            );
             loadUsers(); // Reload to get updated data
           } else {
-            toast.error(response.message || 'Failed to update user status');
+            toast.error(response.message || "Failed to update user status");
           }
           break;
-          
-        case 'reset-password':
+
+        case "reset-password":
           // This would typically open a modal or navigate to reset password page
-         const userToReset = users.find(u => u.id === userId);
+          const userToReset = users.find((u) => u.id === userId);
           if (userToReset) {
             setResetPasswordUser(userToReset);
           }
           break;
-          
-        case 'delete':
-          const userToDelete = users.find(u => u.id === userId);
+
+        case "delete":
+          const userToDelete = users.find((u) => u.id === userId);
           if (userToDelete) {
             setDeleteUser(userToDelete);
           }
           break;
-          
+
         default:
           console.log(`Action ${action} not implemented yet`);
       }
@@ -164,58 +170,67 @@ const UserListMain: React.FC = () => {
     }
   };
 
-    const handleResetPassword = async (userId: number, password: string) => {
-      try {
-        const response = await userService.resetPassword(userId, password);
-        if (response.success) {
-          toast.success('Password reset successfully');
-          setResetPasswordUser(null);
-          
-          // Optional: Send notification to user
-          toast.info('User has been notified of the password change', {
-            description: 'Make sure to securely share the new password with the user.',
-          });
-        } else {
-          throw new Error(response.message || 'Failed to reset password');
-        }
-      } catch (error: any) {
-        throw new Error(error.message || 'Failed to reset password');
+  const handleResetPassword = async (userId: number, password: string) => {
+    try {
+      const response = await userService.resetPassword(userId, password);
+      if (response.success) {
+        toast.success("Password reset successfully");
+        setResetPasswordUser(null);
+
+        // Optional: Send notification to user
+        toast.info("User has been notified of the password change", {
+          description:
+            "Make sure to securely share the new password with the user.",
+        });
+      } else {
+        throw new Error(response.message || "Failed to reset password");
       }
-    };
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to reset password");
+    }
+  };
 
   // Handle bulk actions
   const handleBulkAction = async (action: string) => {
     if (selectedUsers.length === 0) {
-      toast.warning('Please select users first');
+      toast.warning("Please select users first");
       return;
     }
 
     try {
       switch (action) {
-        case 'assign-role':
-          toast.info('Assign role feature coming soon');
+        case "assign-role":
+          toast.info("Assign role feature coming soon");
           break;
-          
-        case 'deactivate':
-          if (window.confirm(`Are you sure you want to deactivate ${selectedUsers.length} users?`)) {
-            toast.info('Bulk deactivate feature coming soon');
+
+        case "deactivate":
+          if (
+            window.confirm(
+              `Are you sure you want to deactivate ${selectedUsers.length} users?`
+            )
+          ) {
+            toast.info("Bulk deactivate feature coming soon");
           }
           break;
-          
-        case 'export-selected':
-          toast.info('Export selected users feature coming soon');
+
+        case "export-selected":
+          toast.info("Export selected users feature coming soon");
           break;
-          
-        case 'delete':
-          if (window.confirm(`Are you sure you want to delete ${selectedUsers.length} users? This action cannot be undone.`)) {
+
+        case "delete":
+          if (
+            window.confirm(
+              `Are you sure you want to delete ${selectedUsers.length} users? This action cannot be undone.`
+            )
+          ) {
             // This would be a bulk delete API call
-            toast.info('Bulk delete feature coming soon');
+            toast.info("Bulk delete feature coming soon");
           }
           break;
-         case 'edit':
+        case "edit":
           handleBulkEdit();
-        break;
-          
+          break;
+
         default:
           console.log(`Bulk action ${action} not implemented yet`);
       }
@@ -226,103 +241,98 @@ const UserListMain: React.FC = () => {
   };
 
   const handleBulkEdit = () => {
-    navigate('/users/edit', {
-          state: {
-            userIds: selectedUsers,
-            users: users.filter(user => selectedUsers.includes(user.id))
-          }
-        });
-};
-
+    navigate("/users/edit", {
+      state: {
+        userIds: selectedUsers,
+        users: users.filter((user) => selectedUsers.includes(user.id)),
+      },
+    });
+  };
 
   // Tambahkan function ini di UserListMain.tsx setelah handleResetPassword
 
-const handleDeleteUser = async (userId: number) => {
-  try {
-    // Get user info before deletion
-    const userToDelete = users.find(u => u.id === userId);
-    const userName = userToDelete 
-      ? `${userToDelete.first_name} ${userToDelete.last_name}` 
-      : 'User';
+  const handleDeleteUser = async (userId: number) => {
+    try {
+      // Get user info before deletion
+      const userToDelete = users.find((u) => u.id === userId);
+      const userName = userToDelete
+        ? `${userToDelete.first_name} ${userToDelete.last_name}`
+        : "User";
 
-    // Call delete API
-    const response = await userService.deleteUser(userId);
+      // Call delete API
+      const response = await userService.deleteUser(userId);
 
-    if (response.success) {
-      // Success: Show notification
-      toast.success('User deleted successfully', {
-        description: `${userName} has been permanently removed from the system.`,
-      });
+      if (response.success) {
+        // Success: Show notification
+        toast.success("User deleted successfully", {
+          description: `${userName} has been permanently removed from the system.`,
+        });
 
-      // Close modal
-      setDeleteUser(null);
+        // Close modal
+        setDeleteUser(null);
 
-      // Remove from selected users if it was selected
-      setSelectedUsers(prev => prev.filter(id => id !== userId));
+        // Remove from selected users if it was selected
+        setSelectedUsers((prev) => prev.filter((id) => id !== userId));
 
-      // Update users list immediately for better UX
-      setUsers(prev => prev.filter(user => user.id !== userId));
+        // Update users list immediately for better UX
+        setUsers((prev) => prev.filter((user) => user.id !== userId));
 
-      // Update pagination total
-      setPagination(prev => ({
-        ...prev,
-        total: prev.total - 1,
-        to: prev.to > 0 ? prev.to - 1 : 0
-      }));
+        // Update pagination total
+        setPagination((prev) => ({
+          ...prev,
+          total: prev.total - 1,
+          to: prev.to > 0 ? prev.to - 1 : 0,
+        }));
 
-      // If current page becomes empty and not first page, go to previous page
-      const remainingUsers = users.filter(user => user.id !== userId);
-      if (remainingUsers.length === 0 && pagination.current_page > 1) {
-        const newFilters = { ...filters, page: pagination.current_page - 1 };
-        handleFiltersChange(newFilters);
+        // If current page becomes empty and not first page, go to previous page
+        const remainingUsers = users.filter((user) => user.id !== userId);
+        if (remainingUsers.length === 0 && pagination.current_page > 1) {
+          const newFilters = { ...filters, page: pagination.current_page - 1 };
+          handleFiltersChange(newFilters);
+        }
+      } else {
+        // API returned error
+        throw new Error(response.message || "Failed to delete user");
+      }
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+
+      // Handle different error scenarios
+      let errorMessage = "Failed to delete user";
+      let errorDescription = "Please try again later.";
+
+      if (error.response?.status === 404) {
+        errorMessage = "User not found";
+        errorDescription = "The user may have already been deleted.";
+        // Remove from UI anyway since user doesn't exist
+        setUsers((prev) => prev.filter((user) => user.id !== userId));
+        setDeleteUser(null);
+      } else if (error.response?.status === 403) {
+        errorMessage = "Permission denied";
+        errorDescription = "You don't have permission to delete this user.";
+      } else if (error.response?.status === 409) {
+        errorMessage = "Cannot delete user";
+        errorDescription = "User has associated data that prevents deletion.";
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
-    } else {
-      // API returned error
-      throw new Error(response.message || 'Failed to delete user');
+      toast.error(errorMessage, {
+        description: errorDescription,
+      });
+
+      // Re-throw error for modal to handle
+      throw new Error(errorMessage);
     }
-
-  } catch (error: any) {
-    console.error('Error deleting user:', error);
-    
-    // Handle different error scenarios
-    let errorMessage = 'Failed to delete user';
-    let errorDescription = 'Please try again later.';
-
-    if (error.response?.status === 404) {
-      errorMessage = 'User not found';
-      errorDescription = 'The user may have already been deleted.';
-      // Remove from UI anyway since user doesn't exist
-      setUsers(prev => prev.filter(user => user.id !== userId));
-      setDeleteUser(null);
-    } else if (error.response?.status === 403) {
-      errorMessage = 'Permission denied';
-      errorDescription = 'You don\'t have permission to delete this user.';
-    } else if (error.response?.status === 409) {
-      errorMessage = 'Cannot delete user';
-      errorDescription = 'User has associated data that prevents deletion.';
-    } else if (error.message) {
-      errorMessage = error.message;
-    }
-
-    toast.error(errorMessage, {
-      description: errorDescription,
-    });
-
-    // Re-throw error for modal to handle
-    throw new Error(errorMessage);
-  }
-};
+  };
 
   // Handle export
   const handleExport = () => {
-    toast.info('Export feature coming soon');
+    toast.info("Export feature coming soon");
     // This would typically trigger a download
     // const blob = await userService.exportUsers(filters);
     // downloadBlob(blob, 'users.csv');
   };
-
-  
 
   return (
     <div className="space-y-6">
@@ -359,13 +369,13 @@ const handleDeleteUser = async (userId: number) => {
         loading={loading}
       />
 
-       <ResetPasswordModal
+      <ResetPasswordModal
         user={resetPasswordUser}
         open={!!resetPasswordUser}
         onClose={() => setResetPasswordUser(null)}
         onResetPassword={handleResetPassword}
       />
-       <UserDeleteModal
+      <UserDeleteModal
         user={deleteUser}
         open={!!deleteUser}
         onClose={() => setDeleteUser(null)}

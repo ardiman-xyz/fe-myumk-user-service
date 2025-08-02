@@ -54,7 +54,7 @@ const UserForm: React.FC<UserFormProps> = ({
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
 
   const validateField = useCallback((fieldName: keyof CreateUserFormData, value: any) => {
-  const error = UserFormValidator.validateField(fieldName, value, formData, mode);
+    const error = UserFormValidator.validateField(fieldName, value, formData, mode);
     
     setErrors(prev => {
       const newErrors = { ...prev };
@@ -65,7 +65,7 @@ const UserForm: React.FC<UserFormProps> = ({
       }
       return newErrors;
     });
-  }, [formData]);
+  }, [formData, mode]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -84,19 +84,61 @@ const UserForm: React.FC<UserFormProps> = ({
 
     // Special case: if password changes, revalidate confirmPassword
     if (fieldName === 'password' && touchedFields.has('confirmPassword')) {
-      const confirmPasswordError = formData.confirmPassword !== newValue 
-        ? "Passwords don't match" 
-        : null;
-      
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        if (confirmPasswordError) {
-          newErrors.confirmPassword = confirmPasswordError;
-        } else {
-          delete newErrors.confirmPassword;
+      // In edit mode, only validate confirmPassword if both fields have values
+      if (mode === 'edit') {
+        if (newValue || formData.confirmPassword) {
+          const confirmPasswordError = formData.confirmPassword !== newValue 
+            ? "Passwords don't match" 
+            : null;
+          
+          setErrors(prev => {
+            const newErrors = { ...prev };
+            if (confirmPasswordError) {
+              newErrors.confirmPassword = confirmPasswordError;
+            } else {
+              delete newErrors.confirmPassword;
+            }
+            return newErrors;
+          });
         }
-        return newErrors;
-      });
+      } else {
+        // Create mode - validate normally
+        const confirmPasswordError = formData.confirmPassword !== newValue 
+          ? "Passwords don't match" 
+          : null;
+        
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          if (confirmPasswordError) {
+            newErrors.confirmPassword = confirmPasswordError;
+          } else {
+            delete newErrors.confirmPassword;
+          }
+          return newErrors;
+        });
+      }
+    }
+
+    // Special case: if confirmPassword changes, validate it against password
+    if (fieldName === 'confirmPassword') {
+      if (mode === 'edit') {
+        // In edit mode, only validate if either field has a value
+        if (newValue || formData.password) {
+          const confirmPasswordError = newValue !== formData.password 
+            ? "Passwords don't match" 
+            : null;
+          
+          setErrors(prev => {
+            const newErrors = { ...prev };
+            if (confirmPasswordError) {
+              newErrors.confirmPassword = confirmPasswordError;
+            } else {
+              delete newErrors.confirmPassword;
+            }
+            return newErrors;
+          });
+        }
+      }
     }
   };
 
@@ -106,17 +148,73 @@ const UserForm: React.FC<UserFormProps> = ({
     validateField(fieldName, formData[fieldName]);
   };
 
+  const validateFormForSubmission = () => {
+    if (mode === 'edit') {
+      // Custom validation for edit mode
+      const editErrors: FormErrors = {};
+      
+      // Required fields that are always validated
+      const requiredFields = ['username', 'email', 'first_name', 'last_name'] as const;
+      
+      requiredFields.forEach(field => {
+        if (!formData[field] || formData[field].toString().trim() === '') {
+          editErrors[field] = `${field.replace('_', ' ')} is required`;
+        }
+      });
+
+      // Email validation
+      if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        editErrors.email = 'Please enter a valid email address';
+      }
+
+      // Username validation
+      if (formData.username && !/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+        editErrors.username = 'Username can only contain letters, numbers, and underscores';
+      }
+      
+      if (formData.username && formData.username.length < 3) {
+        editErrors.username = 'Username must be at least 3 characters';
+      }
+
+      // Password validation (only if provided)
+      if (formData.password && formData.password.trim() !== '') {
+        if (formData.password.length < 8) {
+          editErrors.password = 'Password must be at least 8 characters';
+        } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+          editErrors.password = 'Password must contain uppercase, lowercase, and number';
+        }
+        
+        // Confirm password validation (only if password is provided)
+        if (formData.password !== formData.confirmPassword) {
+          editErrors.confirmPassword = "Passwords don't match";
+        }
+      }
+
+      // Phone validation (if provided)
+      if (formData.phone && formData.phone.trim() !== '' && !/^[\+]?[\d\s\-\(\)]+$/.test(formData.phone)) {
+        editErrors.phone = 'Please enter a valid phone number';
+      }
+
+      setErrors(editErrors);
+      return Object.keys(editErrors).length === 0;
+    } else {
+      // Create mode - use original validation
+      const formErrors = UserFormValidator.validateForm(formData);
+      setErrors(formErrors);
+      return Object.keys(formErrors).length === 0;
+    }
+  };
+
   const handleSubmit = async () => {
     // Mark all fields as touched
     const allFields = Object.keys(formData) as Array<keyof CreateUserFormData>;
     setTouchedFields(new Set(allFields));
 
     // Validate entire form
-    const formErrors = UserFormValidator.validateForm(formData);
-    setErrors(formErrors);
+    const isValid = validateFormForSubmission();
 
-    // If no errors, submit
-    if (Object.keys(formErrors).length === 0) {
+    // If valid, submit
+    if (isValid) {
       await onSubmit(formData);
     }
   };
@@ -128,6 +226,8 @@ const UserForm: React.FC<UserFormProps> = ({
   const isFieldInvalid = (fieldName: string): boolean => {
     return touchedFields.has(fieldName) && !!errors[fieldName];
   };
+
+  const isPasswordRequired = mode === 'create';
 
   return (
     <Card>
@@ -263,14 +363,14 @@ const UserForm: React.FC<UserFormProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="password">
-                Password *
+                Password {isPasswordRequired ? '*' : ''}
               </Label>
               <div className="relative">
                 <Input
                   id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter password"
+                  placeholder={mode === 'edit' ? "Leave blank to keep current password" : "Enter password"}
                   value={formData.password}
                   onChange={handleInputChange}
                   onBlur={handleBlur}
@@ -298,20 +398,23 @@ const UserForm: React.FC<UserFormProps> = ({
                 <p className="text-sm text-red-600">{getFieldError('password')}</p>
               )}
               <p className="text-xs text-gray-500">
-                Min 8 chars, include uppercase, lowercase, and number
+                {mode === 'edit' 
+                  ? "Leave blank to keep current password. If changing: min 8 chars, include uppercase, lowercase, and number"
+                  : "Min 8 chars, include uppercase, lowercase, and number"
+                }
               </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">
-                Confirm Password *
+                Confirm Password {isPasswordRequired ? '*' : ''}
               </Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm password"
+                  placeholder={mode === 'edit' ? "Confirm new password if changing" : "Confirm password"}
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   onBlur={handleBlur}
@@ -366,7 +469,7 @@ const UserForm: React.FC<UserFormProps> = ({
           <div className="flex justify-end pt-6 border-t">
             <Button 
               onClick={handleSubmit}
-              disabled={isLoading || Object.keys(errors).length > 0}
+              disabled={isLoading}
               className="min-w-[140px]"
             >
               {isLoading ? (
