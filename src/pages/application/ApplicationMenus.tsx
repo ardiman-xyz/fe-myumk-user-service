@@ -34,6 +34,9 @@ import { toast } from "sonner";
 import { applicationService } from "@/services/applicationService";
 import { menuService } from "@/services/menuService";
 import CreateMenuModal from "./_components/CreateMenuModal";
+import { getParentMenu, isMenuEditable } from "./helper";
+import MenuDeleteModal from "./_components/MenuDeleteModal";
+import MenuEditModal from "./_components/MenuEditModal";
 
 interface Menu {
   id: number;
@@ -75,6 +78,11 @@ const ApplicationMenusPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedParentId, setSelectedParentId] = useState<number | null>(null);
 
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [menuToDelete, setMenuToDelete] = useState<Menu | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [menuToEdit, setMenuToEdit] = useState<Menu | null>(null);
+
   // Load application and menus
   useEffect(() => {
     loadData();
@@ -110,13 +118,28 @@ const ApplicationMenusPage: React.FC = () => {
       const response = await menuService.getMenusByApplication(applicationId);
       if (response.success && response.data) {
         setMenus(response.data);
+
+        // Auto expand semua menu yang memiliki children
+        const menuTree = buildMenuTree(response.data);
+        const menusWithChildren = new Set<number>();
+
+        const findMenusWithChildren = (menus: Menu[]) => {
+          menus.forEach((menu) => {
+            if (menu.children && menu.children.length > 0) {
+              menusWithChildren.add(menu.id);
+              findMenusWithChildren(menu.children);
+            }
+          });
+        };
+
+        findMenusWithChildren(menuTree);
+        setExpandedMenus(menusWithChildren);
       }
     } catch (error: any) {
       console.error("Error loading menus:", error);
       toast.error("Failed to load menus");
     }
   };
-
   const handleToggleStatus = async (menuId: number) => {
     try {
       const response = await menuService.toggleMenuStatus(menuId);
@@ -144,23 +167,9 @@ const ApplicationMenusPage: React.FC = () => {
     toast.success("Menu created successfully");
   };
 
-  const handleDeleteMenu = async (menuId: number) => {
-    if (!window.confirm("Are you sure you want to delete this menu?")) {
-      return;
-    }
-
-    try {
-      const response = await menuService.deleteMenu(menuId);
-      if (response.success) {
-        await loadMenus();
-        toast.success("Menu deleted successfully");
-      } else {
-        toast.error(response.message || "Failed to delete menu");
-      }
-    } catch (error: any) {
-      console.error("Error deleting menu:", error);
-      toast.error("Failed to delete menu");
-    }
+  const handleDeleteMenu = (menu: Menu) => {
+    setMenuToDelete(menu);
+    setIsDeleteModalOpen(true);
   };
 
   const toggleExpanded = (menuId: number) => {
@@ -185,8 +194,15 @@ const ApplicationMenusPage: React.FC = () => {
     // Build the tree structure
     menus.forEach((menu) => {
       const menuItem = menuMap.get(menu.id)!;
-      if (menu.parent_id && menuMap.has(menu.parent_id)) {
-        const parent = menuMap.get(menu.parent_id)!;
+
+      // Convert parent_id to number if it's a string
+      const parentId =
+        typeof menu.parent_id === "string"
+          ? parseInt(menu.parent_id, 10)
+          : menu.parent_id;
+
+      if (parentId && menuMap.has(parentId)) {
+        const parent = menuMap.get(parentId)!;
         if (!parent.children) parent.children = [];
         parent.children.push(menuItem);
       } else {
@@ -194,44 +210,85 @@ const ApplicationMenusPage: React.FC = () => {
       }
     });
 
+    console.groupEnd();
+
     return rootMenus;
   };
 
+  const confirmDeleteMenu = async (menuId: number) => {
+    try {
+      const response = await menuService.deleteMenu(menuId);
+      if (response.success) {
+        await loadMenus();
+        toast.success("Menu deleted successfully");
+      } else {
+        throw new Error(response.message || "Failed to delete menu");
+      }
+    } catch (error: any) {
+      console.error("Error deleting menu:", error);
+      throw error;
+    }
+  };
+
+  const handleEditMenu = (menu: Menu) => {
+    setMenuToEdit(menu);
+    setIsEditModalOpen(true);
+  };
+
+  const updateMenu = async (menuId: number, data: any) => {
+    try {
+      const response = await menuService.updateMenu(menuId, data);
+      if (response.success) {
+        await loadMenus();
+        return;
+      }
+      throw new Error(response.message || "Failed to update menu");
+    } catch (error: any) {
+      console.error("Error updating menu:", error);
+      throw error;
+    }
+  };
+
   const filterMenus = (menus: Menu[]): Menu[] => {
-    return menus.filter((menu) => {
+    const filtered = menus.filter((menu) => {
       const matchesSearch =
         !searchQuery ||
         menu.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         menu.code.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesStatus = showInactive || menu.is_active;
+      // Selalu return true untuk status (tampilkan semua menu)
+      const matchesStatus = true; // Hapus filter status, tampilkan semua
 
       return matchesSearch && matchesStatus;
     });
+
+    return filtered;
   };
 
   const renderMenu = (menu: Menu, level: number = 0) => {
-    console.info(`menu : ${menu}`);
-
     const hasChildren = menu.children && menu.children.length > 0;
-    console.info("has chilren : " + hasChildren);
     const isExpanded = expandedMenus.has(menu.id);
+    const isEditable = isMenuEditable(menu, menus);
+    const parent = getParentMenu(menu.id, menus);
 
     return (
       <div key={menu.id} className="border-b border-gray-100 last:border-b-0">
         <div
           className={`flex items-center gap-3 p-3 hover:bg-gray-50 ${
             level > 0 ? "border-l-2 border-blue-200 bg-blue-50/30" : ""
-          }`}
+          } ${!isEditable ? "opacity-60" : ""}`}
           style={{
             marginLeft: level * 32,
             paddingLeft: level > 0 ? "1rem" : "0.75rem",
           }}
         >
-          {/* Drag Handle */}
-          <GripVertical className="h-4 w-4 text-gray-400 cursor-move" />
+          {/* Drag Handle - disabled jika parent tidak aktif */}
+          <GripVertical
+            className={`h-4 w-4 text-gray-400 ${
+              isEditable ? "cursor-move" : "cursor-not-allowed opacity-50"
+            }`}
+          />
 
-          {/* Expand/Collapse Button */}
           <div className="w-6 flex justify-center">
             {hasChildren ? (
               <button
@@ -247,7 +304,6 @@ const ApplicationMenusPage: React.FC = () => {
             ) : null}
           </div>
 
-          {/* Menu Icon */}
           <div
             className={`w-8 h-8 rounded flex items-center justify-center ${
               level > 0 ? "bg-blue-100" : "bg-gray-100"
@@ -260,7 +316,6 @@ const ApplicationMenusPage: React.FC = () => {
             />
           </div>
 
-          {/* Menu Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h4
@@ -279,6 +334,11 @@ const ApplicationMenusPage: React.FC = () => {
                 @{menu.code}
               </span>
               {!menu.is_active && <EyeOff className="h-3 w-3 text-red-500" />}
+              {!isEditable && parent && !parent.is_active && (
+                <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">
+                  Parent Inactive
+                </span>
+              )}
             </div>
             {menu.description && (
               <p
@@ -312,35 +372,55 @@ const ApplicationMenusPage: React.FC = () => {
             </span>
           </div>
 
-          {/* Actions */}
+          {/* Actions - dengan kondisi disabled */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                disabled={!isEditable} // Disable jika parent tidak aktif
+              >
                 <MoreHorizontal className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Menu Actions</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                Menu Actions
+                {!isEditable && (
+                  <span className="block text-xs text-orange-600 font-normal">
+                    (Parent menu is inactive)
+                  </span>
+                )}
+              </DropdownMenuLabel>
 
               <DropdownMenuItem
-                onClick={() => navigate(`/menus/${menu.id}/edit`)}
+                onClick={() => handleEditMenu(menu)}
+                disabled={!isEditable}
+                className={!isEditable ? "opacity-50 cursor-not-allowed" : ""}
               >
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Menu
               </DropdownMenuItem>
 
-              <DropdownMenuItem onClick={() => handleCreateMenu(menu.id)}>
+              <DropdownMenuItem
+                onClick={() => handleCreateMenu(menu.id)}
+                disabled={!isEditable}
+                className={!isEditable ? "opacity-50 cursor-not-allowed" : ""}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Sub-menu
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 
+              {/* Toggle status - hanya disable edit, bukan status toggle */}
               <DropdownMenuItem
                 onClick={() => handleToggleStatus(menu.id)}
                 className={
                   menu.is_active ? "text-yellow-600" : "text-green-600"
                 }
+                disabled={!isEditable}
               >
                 {menu.is_active ? (
                   <>
@@ -358,8 +438,9 @@ const ApplicationMenusPage: React.FC = () => {
               <DropdownMenuSeparator />
 
               <DropdownMenuItem
-                onClick={() => handleDeleteMenu(menu.id)}
+                onClick={() => handleDeleteMenu(menu)}
                 className="text-red-600"
+                disabled={!isEditable}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete Menu
@@ -528,6 +609,27 @@ const ApplicationMenusPage: React.FC = () => {
         applicationId={applicationId}
         parentId={selectedParentId}
         menus={menus}
+      />
+
+      <MenuDeleteModal
+        menu={menuToDelete}
+        open={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setMenuToDelete(null);
+        }}
+        onDeleteMenu={confirmDeleteMenu}
+      />
+      <MenuEditModal
+        menu={menuToEdit}
+        open={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setMenuToEdit(null);
+        }}
+        onUpdateMenu={updateMenu}
+        parentMenus={menus.filter((m) => !m.parent_id)} // Hanya root menus sebagai parent options
+        applicationId={applicationId}
       />
     </div>
   );
