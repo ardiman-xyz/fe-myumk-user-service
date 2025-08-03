@@ -34,6 +34,7 @@ import {
   Copy,
   Zap,
   Settings,
+  Users,
 } from "lucide-react";
 import type { Application } from "@/types/application";
 
@@ -63,9 +64,8 @@ const ApplicationListTable: React.FC<ApplicationListTableProps> = ({
   };
 
   const getApplicationIcon = (iconName?: string) => {
-    // You can expand this to support more icons based on your icon system
     const iconMap: { [key: string]: React.ReactNode } = {
-      users: <Shield className="h-5 w-5" />,
+      users: <Users className="h-5 w-5" />,
       "file-text": <Menu className="h-5 w-5" />,
       "bar-chart": <Settings className="h-5 w-5" />,
       "shopping-cart": <Globe className="h-5 w-5" />,
@@ -321,15 +321,6 @@ const ApplicationListTable: React.FC<ApplicationListTableProps> = ({
                               Activate App
                             </>
                           )}
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                          onClick={() =>
-                            onApplicationAction("duplicate", application.id)
-                          }
-                        >
-                          <Copy className="mr-2 h-4 w-4" />
-                          Duplicate Application
                         </DropdownMenuItem>
 
                         <DropdownMenuSeparator />

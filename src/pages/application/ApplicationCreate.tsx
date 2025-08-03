@@ -12,6 +12,7 @@ import type {
 
 import { applicationService } from "@/services/applicationService";
 import ApplicationForm from "./_components/ApplicationForm";
+import ApplicationCreateInfo from "./_components/ApplicationCreateInfo";
 
 const AddApplicationPage: React.FC = () => {
   useTitle("Add Application - User Service");
@@ -176,7 +177,7 @@ const AddApplicationPage: React.FC = () => {
 
         {/* Sidebar Section */}
         <div className="lg:col-span-1">
-          {/* <ApplicationCreateInfo onQuickAction={handleQuickAction} /> */}
+          <ApplicationCreateInfo onQuickAction={handleQuickAction} />
         </div>
       </div>
 
