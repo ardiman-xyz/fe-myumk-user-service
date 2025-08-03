@@ -2,17 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useTitle } from "@/hooks/useTitle";
 import { toast } from "sonner";
-import {
-  userService,
-  type User,
-  type UserFilters,
-} from "@/services/userService";
+
 import UserListHeader from "./_components/UserListHeader";
 import UserListFilters from "./_components/UserListFilters";
 import UserListTable from "./_components/UserListTable";
 import UserListPagination from "./_components/UserListPagination";
 import ResetPasswordModal from "./_components/ResetPasswordModal";
 import UserDeleteModal from "./_components/UserDeleteModal";
+import type { User, UserFilters } from "@/types/user";
+import { userService } from "@/services/userService";
 
 interface PaginationData {
   current_page: number;

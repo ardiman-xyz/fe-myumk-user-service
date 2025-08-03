@@ -43,9 +43,15 @@ export interface UpdateUserRequest {
 
 export interface UserFilters {
   search?: string;
-  status?: 'active' | 'inactive' | '';
-  sort_by?: 'id' | 'username' | 'email' | 'first_name' | 'last_name' | 'created_at';
-  sort_order?: 'asc' | 'desc';
+  status?: "active" | "inactive" | "";
+  sort_by?:
+    | "id"
+    | "username"
+    | "email"
+    | "first_name"
+    | "last_name"
+    | "created_at";
+  sort_order?: "asc" | "desc";
   per_page?: number;
   page?: number;
 }
@@ -74,7 +80,7 @@ export interface ApiResponse<T> {
 
 class UserService {
   private getAuthHeaders() {
-    const token = localStorage.getItem('token-user-service');
+    const token = localStorage.getItem("token-user-service");
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
@@ -84,9 +90,9 @@ class UserService {
   async getUsers(filters: UserFilters = {}): Promise<ApiResponse<User[]>> {
     try {
       const params = new URLSearchParams();
-      
+
       Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
+        if (value !== undefined && value !== null && value !== "") {
           params.append(key, value.toString());
         }
       });
@@ -110,10 +116,9 @@ class UserService {
    */
   async getUserById(id: number): Promise<ApiResponse<User>> {
     try {
-      const response = await apiClient.get<ApiResponse<User>>(
-        `/users/${id}`,
-        { headers: this.getAuthHeaders() }
-      );
+      const response = await apiClient.get<ApiResponse<User>>(`/users/${id}`, {
+        headers: this.getAuthHeaders(),
+      });
 
       return response.data;
     } catch (error: any) {
@@ -130,7 +135,7 @@ class UserService {
   async createUser(userData: CreateUserRequest): Promise<ApiResponse<User>> {
     try {
       const response = await apiClient.post<ApiResponse<User>>(
-        '/users',
+        "/users",
         userData,
         { headers: this.getAuthHeaders() }
       );
@@ -147,7 +152,10 @@ class UserService {
   /**
    * Update existing user
    */
-  async updateUser(id: number, userData: UpdateUserRequest): Promise<ApiResponse<User>> {
+  async updateUser(
+    id: number,
+    userData: UpdateUserRequest
+  ): Promise<ApiResponse<User>> {
     try {
       const response = await apiClient.put<ApiResponse<User>>(
         `/users/${id}`,
@@ -206,7 +214,10 @@ class UserService {
   /**
    * Search users
    */
-  async searchUsers(query: string, limit: number = 10): Promise<ApiResponse<User[]>> {
+  async searchUsers(
+    query: string,
+    limit: number = 10
+  ): Promise<ApiResponse<User[]>> {
     try {
       const response = await apiClient.get<ApiResponse<User[]>>(
         `/users/search?q=${encodeURIComponent(query)}&limit=${limit}`,
@@ -228,7 +239,7 @@ class UserService {
   async getActiveUsers(): Promise<ApiResponse<User[]>> {
     try {
       const response = await apiClient.get<ApiResponse<User[]>>(
-        '/users/active',
+        "/users/active",
         { headers: this.getAuthHeaders() }
       );
 
@@ -244,7 +255,10 @@ class UserService {
   /**
    * Reset user password
    */
-  async resetPassword(id: number, password: string): Promise<ApiResponse<User>> {
+  async resetPassword(
+    id: number,
+    password: string
+  ): Promise<ApiResponse<User>> {
     try {
       const response = await apiClient.patch<ApiResponse<User>>(
         `/users/${id}/reset-password`,

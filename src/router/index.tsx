@@ -7,6 +7,7 @@ import { userRoutes } from "@/routes/userRoutes";
 import { roleRoutes } from "@/routes/roleRoutes";
 import DashboarLayout from "@/components/DashboarLayout";
 import { applicationRoutes } from "@/routes/applicationRoutes";
+import { permissionRoutes } from "@/routes/permissionRoutes";
 
 function AuthRedirect() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
       ...userRoutes,
       ...roleRoutes,
       ...applicationRoutes,
+      ...permissionRoutes,
     ],
   },
   {

@@ -101,10 +101,17 @@ export interface UpdateUserRequest {
 
 export interface UserFilters {
   search?: string;
-  status?: 'active' | 'inactive' | '';
+  status?: "active" | "inactive" | "";
   role?: string;
-  sort_by?: 'id' | 'username' | 'email' | 'first_name' | 'last_name' | 'created_at' | 'last_login_at';
-  sort_order?: 'asc' | 'desc';
+  sort_by?:
+    | "id"
+    | "username"
+    | "email"
+    | "first_name"
+    | "last_name"
+    | "created_at"
+    | "last_login_at";
+  sort_order?: "asc" | "desc";
   per_page?: number;
   page?: number;
 }
@@ -149,13 +156,18 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 // ================================
 
 export class UserServiceError extends Error {
+  statusCode?: number;
+  errors?: Record<string, string[]>;
+
   constructor(
     message: string,
-    public statusCode?: number,
-    public errors?: Record<string, string[]>
+    statusCode?: number,
+    errors?: Record<string, string[]>
   ) {
     super(message);
-    this.name = 'UserServiceError';
+    this.name = "UserServiceError";
+    this.statusCode = statusCode;
+    this.errors = errors;
   }
 }
 
@@ -163,17 +175,17 @@ const handleApiError = (error: any): never => {
   if (error.response?.data) {
     const apiError = error.response.data;
     throw new UserServiceError(
-      apiError.message || 'API request failed',
+      apiError.message || "API request failed",
       error.response.status,
       apiError.errors
     );
   }
-  
-  if (error.code === 'NETWORK_ERROR') {
-    throw new UserServiceError('Network error. Please check your connection.');
+
+  if (error.code === "NETWORK_ERROR") {
+    throw new UserServiceError("Network error. Please check your connection.");
   }
-  
-  throw new UserServiceError(error.message || 'An unexpected error occurred');
+
+  throw new UserServiceError(error.message || "An unexpected error occurred");
 };
 
 // ================================
@@ -182,7 +194,7 @@ const handleApiError = (error: any): never => {
 
 export class UserService {
   private getAuthHeaders() {
-    const token = localStorage.getItem('token-user-service');
+    const token = localStorage.getItem("token-user-service");
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
@@ -196,10 +208,10 @@ export class UserService {
   async getUsers(filters: UserFilters = {}): Promise<PaginatedResponse<User>> {
     try {
       const params = new URLSearchParams();
-      
+
       // Add filters to params
       Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
+        if (value !== undefined && value !== null && value !== "") {
           params.append(key, value.toString());
         }
       });
@@ -220,10 +232,9 @@ export class UserService {
    */
   async getUserById(id: number): Promise<ApiResponse<User>> {
     try {
-      const response = await apiClient.get<ApiResponse<User>>(
-        `/users/${id}`,
-        { headers: this.getAuthHeaders() }
-      );
+      const response = await apiClient.get<ApiResponse<User>>(`/users/${id}`, {
+        headers: this.getAuthHeaders(),
+      });
 
       return response.data;
     } catch (error: any) {
@@ -237,7 +248,7 @@ export class UserService {
   async createUser(userData: CreateUserRequest): Promise<ApiResponse<User>> {
     try {
       const response = await apiClient.post<ApiResponse<User>>(
-        '/users',
+        "/users",
         userData,
         { headers: this.getAuthHeaders() }
       );
@@ -251,7 +262,10 @@ export class UserService {
   /**
    * Update existing user
    */
-  async updateUser(id: number, userData: UpdateUserRequest): Promise<ApiResponse<User>> {
+  async updateUser(
+    id: number,
+    userData: UpdateUserRequest
+  ): Promise<ApiResponse<User>> {
     try {
       const response = await apiClient.put<ApiResponse<User>>(
         `/users/${id}`,
@@ -301,7 +315,10 @@ export class UserService {
   /**
    * Reset user password
    */
-  async resetPassword(id: number, password: string): Promise<ApiResponse<User>> {
+  async resetPassword(
+    id: number,
+    password: string
+  ): Promise<ApiResponse<User>> {
     try {
       const response = await apiClient.patch<ApiResponse<User>>(
         `/users/${id}/reset-password`,
@@ -322,7 +339,10 @@ export class UserService {
   /**
    * Search users by query string
    */
-  async searchUsers(query: string, limit: number = 10): Promise<ApiResponse<User[]>> {
+  async searchUsers(
+    query: string,
+    limit: number = 10
+  ): Promise<ApiResponse<User[]>> {
     try {
       const response = await apiClient.get<ApiResponse<User[]>>(
         `/users/search?q=${encodeURIComponent(query)}&limit=${limit}`,
@@ -341,7 +361,7 @@ export class UserService {
   async getActiveUsers(): Promise<ApiResponse<User[]>> {
     try {
       const response = await apiClient.get<ApiResponse<User[]>>(
-        '/users/active',
+        "/users/active",
         { headers: this.getAuthHeaders() }
       );
 
@@ -354,13 +374,15 @@ export class UserService {
   /**
    * Get users with their roles
    */
-  async getUsersWithRoles(filters: UserFilters = {}): Promise<PaginatedResponse<User>> {
+  async getUsersWithRoles(
+    filters: UserFilters = {}
+  ): Promise<PaginatedResponse<User>> {
     try {
       const params = new URLSearchParams();
-      params.append('include', 'roles');
-      
+      params.append("include", "roles");
+
       Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
+        if (value !== undefined && value !== null && value !== "") {
           params.append(key, value.toString());
         }
       });
@@ -383,10 +405,13 @@ export class UserService {
   /**
    * Bulk update users status
    */
-  async bulkUpdateStatus(userIds: number[], isActive: boolean): Promise<ApiResponse<any>> {
+  async bulkUpdateStatus(
+    userIds: number[],
+    isActive: boolean
+  ): Promise<ApiResponse<any>> {
     try {
       const response = await apiClient.patch<ApiResponse<any>>(
-        '/users/bulk-status',
+        "/users/bulk-status",
         { user_ids: userIds, is_active: isActive },
         { headers: this.getAuthHeaders() }
       );
@@ -403,10 +428,10 @@ export class UserService {
   async bulkDeleteUsers(userIds: number[]): Promise<ApiResponse<any>> {
     try {
       const response = await apiClient.delete<ApiResponse<any>>(
-        '/users/bulk-delete',
-        { 
+        "/users/bulk-delete",
+        {
           data: { user_ids: userIds },
-          headers: this.getAuthHeaders() 
+          headers: this.getAuthHeaders(),
         }
       );
 
@@ -423,7 +448,11 @@ export class UserService {
   /**
    * Assign role to user
    */
-  async assignRole(userId: number, roleId: number, expiresAt?: string): Promise<ApiResponse<UserRole>> {
+  async assignRole(
+    userId: number,
+    roleId: number,
+    expiresAt?: string
+  ): Promise<ApiResponse<UserRole>> {
     try {
       const response = await apiClient.post<ApiResponse<UserRole>>(
         `/users/${userId}/roles`,
@@ -476,7 +505,10 @@ export class UserService {
   /**
    * Get user activity logs
    */
-  async getUserActivity(userId: number, limit: number = 50): Promise<ApiResponse<UserActivityLog[]>> {
+  async getUserActivity(
+    userId: number,
+    limit: number = 50
+  ): Promise<ApiResponse<UserActivityLog[]>> {
     try {
       const response = await apiClient.get<ApiResponse<UserActivityLog[]>>(
         `/users/${userId}/activity?limit=${limit}`,
@@ -508,7 +540,10 @@ export class UserService {
   /**
    * Terminate user session
    */
-  async terminateSession(userId: number, sessionId: number): Promise<ApiResponse<null>> {
+  async terminateSession(
+    userId: number,
+    sessionId: number
+  ): Promise<ApiResponse<null>> {
     try {
       const response = await apiClient.delete<ApiResponse<null>>(
         `/users/${userId}/sessions/${sessionId}`,
@@ -530,10 +565,9 @@ export class UserService {
    */
   async getUserStats(): Promise<ApiResponse<any>> {
     try {
-      const response = await apiClient.get<ApiResponse<any>>(
-        '/users/stats',
-        { headers: this.getAuthHeaders() }
-      );
+      const response = await apiClient.get<ApiResponse<any>>("/users/stats", {
+        headers: this.getAuthHeaders(),
+      });
 
       return response.data;
     } catch (error: any) {
@@ -544,7 +578,10 @@ export class UserService {
   /**
    * Get user login history
    */
-  async getUserLoginHistory(userId: number, days: number = 30): Promise<ApiResponse<any[]>> {
+  async getUserLoginHistory(
+    userId: number,
+    days: number = 30
+  ): Promise<ApiResponse<any[]>> {
     try {
       const response = await apiClient.get<ApiResponse<any[]>>(
         `/users/${userId}/login-history?days=${days}`,
@@ -568,16 +605,16 @@ export class UserService {
     try {
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
+        if (value !== undefined && value !== null && value !== "") {
           params.append(key, value.toString());
         }
       });
 
       const response = await apiClient.get(
         `/users/export?${params.toString()}`,
-        { 
+        {
           headers: this.getAuthHeaders(),
-          responseType: 'blob'
+          responseType: "blob",
         }
       );
 
@@ -593,15 +630,15 @@ export class UserService {
   async importUsers(file: File): Promise<ApiResponse<any>> {
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
       const response = await apiClient.post<ApiResponse<any>>(
-        '/users/import',
+        "/users/import",
         formData,
         {
           headers: {
             ...this.getAuthHeaders(),
-            'Content-Type': 'multipart/form-data',
+            "Content-Type": "multipart/form-data",
           },
         }
       );
@@ -619,7 +656,9 @@ export class UserService {
   /**
    * Check if username is available
    */
-  async checkUsernameAvailability(username: string): Promise<ApiResponse<{ available: boolean }>> {
+  async checkUsernameAvailability(
+    username: string
+  ): Promise<ApiResponse<{ available: boolean }>> {
     try {
       const response = await apiClient.get<ApiResponse<{ available: boolean }>>(
         `/users/check-username?username=${encodeURIComponent(username)}`,
@@ -635,7 +674,9 @@ export class UserService {
   /**
    * Check if email is available
    */
-  async checkEmailAvailability(email: string): Promise<ApiResponse<{ available: boolean }>> {
+  async checkEmailAvailability(
+    email: string
+  ): Promise<ApiResponse<{ available: boolean }>> {
     try {
       const response = await apiClient.get<ApiResponse<{ available: boolean }>>(
         `/users/check-email?email=${encodeURIComponent(email)}`,
@@ -653,11 +694,11 @@ export class UserService {
    */
   generateAvatarUrl(user: User): string {
     if (user.avatar) {
-      return user.avatar.startsWith('http') 
-        ? user.avatar 
+      return user.avatar.startsWith("http")
+        ? user.avatar
         : `${process.env.REACT_APP_API_URL}/storage/avatars/${user.avatar}`;
     }
-    
+
     // Generate initials avatar
     const initials = `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
     return `https://ui-avatars.com/api/?name=${initials}&background=random&color=fff&size=128`;
@@ -682,17 +723,20 @@ export class UserService {
    * Check if user has specific role
    */
   userHasRole(user: User, roleName: string): boolean {
-    return user.roles?.some(role => role.name === roleName) || false;
+    return user.roles?.some((role) => role.name === roleName) || false;
   }
 
   /**
    * Get user status badge info
    */
-  getUserStatusBadge(user: User): { text: string; variant: 'success' | 'destructive' | 'secondary' } {
+  getUserStatusBadge(user: User): {
+    text: string;
+    variant: "success" | "destructive" | "secondary";
+  } {
     if (user.is_active) {
-      return { text: 'Active', variant: 'success' };
+      return { text: "Active", variant: "success" };
     }
-    return { text: 'Inactive', variant: 'destructive' };
+    return { text: "Inactive", variant: "destructive" };
   }
 }
 
@@ -734,33 +778,39 @@ export const useUserList = (initialFilters: UserFilters = {}) => {
     has_more_pages: false,
   });
 
-  const loadUsers = React.useCallback(async (newFilters?: UserFilters) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await userService.getUsers(newFilters || filters);
-      
-      if (response.success && response.data) {
-        setUsers(response.data);
-        if (response.meta?.pagination) {
-          setPagination(response.meta.pagination);
-        }
-      } else {
-        setError(response.message || 'Failed to load users');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load users');
-    } finally {
-      setLoading(false);
-    }
-  }, [filters]);
+  const loadUsers = React.useCallback(
+    async (newFilters?: UserFilters) => {
+      setLoading(true);
+      setError(null);
 
-  const updateFilters = React.useCallback((newFilters: Partial<UserFilters>) => {
-    const updatedFilters = { ...filters, ...newFilters };
-    setFilters(updatedFilters);
-    loadUsers(updatedFilters);
-  }, [filters, loadUsers]);
+      try {
+        const response = await userService.getUsers(newFilters || filters);
+
+        if (response.success && response.data) {
+          setUsers(response.data);
+          if (response.meta?.pagination) {
+            setPagination(response.meta.pagination);
+          }
+        } else {
+          setError(response.message || "Failed to load users");
+        }
+      } catch (err: any) {
+        setError(err.message || "Failed to load users");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [filters]
+  );
+
+  const updateFilters = React.useCallback(
+    (newFilters: Partial<UserFilters>) => {
+      const updatedFilters = { ...filters, ...newFilters };
+      setFilters(updatedFilters);
+      loadUsers(updatedFilters);
+    },
+    [filters, loadUsers]
+  );
 
   React.useEffect(() => {
     loadUsers();

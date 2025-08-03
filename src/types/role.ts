@@ -1,5 +1,4 @@
 // src/types/role.ts
-
 export interface Role {
   id: number;
   name: string;
@@ -26,6 +25,7 @@ export interface Permission {
   action: string;
   created_at: string;
   updated_at: string;
+  roles_count?: number;
 }
 
 export interface Application {
@@ -38,6 +38,8 @@ export interface Application {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  roles_count?: number;
+  menus_count?: number;
 }
 
 export interface User {
@@ -46,32 +48,28 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
-  phone?: string;
-  avatar?: string;
+  full_name: string;
   is_active: boolean;
-  email_verified_at?: string;
-  last_login_at?: string;
   created_at: string;
   updated_at: string;
-  full_name: string;
 }
 
-export interface RoleFilters {
-  search?: string;
-  status?: "active" | "inactive" | "";
-  is_admin?: boolean | "";
-  sort_by?:
-    | "id"
-    | "name"
-    | "code"
-    | "created_at"
-    | "users_count"
-    | "permissions_count";
-  sort_order?: "asc" | "desc";
-  per_page?: number;
-  page?: number;
+// Form Data Types
+export interface CreateRoleFormData {
+  name: string;
+  code: string;
+  description?: string;
+  is_admin: boolean;
+  is_active: boolean;
+  permissions: number[];
+  applications: number[];
 }
 
+export interface UpdateRoleFormData extends Partial<CreateRoleFormData> {
+  id: number;
+}
+
+// API Request Types
 export interface CreateRoleRequest {
   name: string;
   code: string;
@@ -84,51 +82,11 @@ export interface CreateRoleRequest {
 
 export interface UpdateRoleRequest {
   name?: string;
-  code?: string;
   description?: string;
   is_admin?: boolean;
   is_active?: boolean;
   permissions?: number[];
   applications?: number[];
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data?: T;
-  errors?: Record<string, string[]>;
-  meta?: {
-    pagination?: {
-      current_page: number;
-      last_page: number;
-      per_page: number;
-      total: number;
-      from: number;
-      to: number;
-      has_more_pages: boolean;
-    };
-    count?: number;
-  };
-}
-
-export interface RoleStats {
-  total_roles: number;
-  active_roles: number;
-  inactive_roles: number;
-  admin_roles: number;
-  user_roles: number;
-  roles_with_users: number;
-  roles_without_users: number;
-  most_assigned_role?: {
-    id: number;
-    name: string;
-    users_count: number;
-  };
-  recent_roles: Array<{
-    id: number;
-    name: string;
-    created_at: string;
-  }>;
 }
 
 export interface AssignPermissionsRequest {
@@ -146,130 +104,62 @@ export interface DuplicateRoleRequest {
   description?: string;
 }
 
-// src/types/role.ts - Add these types to the existing role types file
-
-import { z, ZodError } from "zod";
-
-// Zod validation schema for creating role
-export const createRoleSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Role name is required")
-    .min(2, "Role name must be at least 2 characters")
-    .max(255, "Role name must not exceed 255 characters")
-    .regex(
-      /^[a-zA-Z0-9\s\-_]+$/,
-      "Role name can only contain letters, numbers, spaces, hyphens, and underscores"
-    ),
-
-  code: z
-    .string()
-    .min(1, "Role code is required")
-    .min(2, "Role code must be at least 2 characters")
-    .max(255, "Role code must not exceed 255 characters")
-    .regex(
-      /^[a-zA-Z0-9_]+$/,
-      "Role code can only contain letters, numbers, and underscores"
-    )
-    .transform((str) => str.toLowerCase()),
-
-  description: z
-    .string()
-    .max(1000, "Description must not exceed 1000 characters")
-    .optional(),
-
-  is_admin: z.boolean().default(false),
-  is_active: z.boolean().default(true),
-
-  permissions: z.array(z.number()).optional(),
-
-  applications: z.array(z.number()).optional(),
-});
-
-// Type inference from Zod schema
-export type CreateRoleFormData = z.infer<typeof createRoleSchema>;
-
-// Update role schema (all fields optional except validation logic)
-export const updateRoleSchema = z.object({
-  name: z
-    .string()
-    .min(2, "Role name must be at least 2 characters")
-    .max(255, "Role name must not exceed 255 characters")
-    .regex(
-      /^[a-zA-Z0-9\s\-_]+$/,
-      "Role name can only contain letters, numbers, spaces, hyphens, and underscores"
-    )
-    .optional(),
-
-  code: z
-    .string()
-    .min(2, "Role code must be at least 2 characters")
-    .max(255, "Role code must not exceed 255 characters")
-    .regex(
-      /^[a-zA-Z0-9_]+$/,
-      "Role code can only contain letters, numbers, and underscores"
-    )
-    .transform((str) => str.toLowerCase())
-    .optional(),
-
-  description: z
-    .string()
-    .max(1000, "Description must not exceed 1000 characters")
-    .optional(),
-
-  is_admin: z.boolean().optional(),
-  is_active: z.boolean().optional(),
-
-  permissions: z.array(z.number()).optional(),
-
-  applications: z.array(z.number()).optional(),
-});
-
-export type UpdateRoleFormData = z.infer<typeof updateRoleSchema>;
-
-// Form guidelines and help content
-export interface RoleFormGuidelines {
-  name: string[];
-  code: string[];
-  permissions: string[];
-  general: string[];
-  nextSteps: string[];
+// Filter and Search Types
+export interface RoleFilters {
+  search?: string;
+  status?: "active" | "inactive" | "";
+  is_admin?: boolean | "";
+  sort_by?:
+    | "created_at"
+    | "name"
+    | "code"
+    | "users_count"
+    | "permissions_count";
+  sort_order?: "asc" | "desc";
+  per_page?: number;
+  page?: number;
 }
 
-export const ROLE_FORM_GUIDELINES: RoleFormGuidelines = {
-  name: [
-    "Use descriptive names that clearly indicate the role purpose",
-    "Avoid abbreviations unless commonly understood",
-    "Keep names concise but meaningful",
-    "Use title case for better readability",
-  ],
-  code: [
-    "Must be unique across the system",
-    "Use lowercase with underscores for separation",
-    "Should be short but descriptive",
-    "Cannot be changed after creation",
-  ],
-  permissions: [
-    "Select only necessary permissions for the role",
-    "Follow principle of least privilege",
-    "Consider user workflow when assigning permissions",
-    "Review permissions regularly for security",
-  ],
-  general: [
-    "All required fields must be filled",
-    "Role code must be unique and cannot be changed",
-    "Admin roles have elevated system privileges",
-    "Inactive roles cannot be assigned to users",
-  ],
-  nextSteps: [
-    "Assign permissions based on role requirements",
-    "Test role functionality with test users",
-    "Document role purpose and responsibilities",
-    "Set up role-based access controls",
-  ],
-};
+// API Response Types
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data?: T;
+  errors?: Record<string, string[]>;
+  meta?: {
+    pagination?: {
+      current_page: number;
+      last_page: number;
+      per_page: number;
+      total: number;
+      from: number;
+      to: number;
+      has_more_pages: boolean;
+    };
+  };
+}
 
-// Quick actions configuration
+export interface RoleStats {
+  total_roles: number;
+  active_roles: number;
+  inactive_roles: number;
+  admin_roles: number;
+  user_roles: number;
+  roles_with_users: number;
+  roles_without_users: number;
+  most_assigned_role?: Role;
+  recent_roles: Role[];
+}
+
+// Validation and Form Helper Types
+export interface RoleFormErrors {
+  name?: string;
+  code?: string;
+  description?: string;
+  permissions?: string;
+  applications?: string;
+}
+
 export interface RoleQuickAction {
   id: string;
   label: string;
@@ -278,53 +168,168 @@ export interface RoleQuickAction {
   action: () => void;
 }
 
-// Form validation helpers
+// Form Validation Rules
+export const ROLE_FORM_GUIDELINES = {
+  name: [
+    "Use descriptive names like 'Content Manager' or 'Sales Administrator'",
+    "Avoid generic names like 'Role1' or 'Test'",
+    "Names should be 3-255 characters long",
+    "Use title case for professional appearance",
+  ],
+  code: [
+    "Use lowercase with underscores: 'content_manager'",
+    "Must be unique across all roles",
+    "Only letters, numbers, and underscores allowed",
+    "Cannot be changed after creation",
+  ],
+  permissions: [
+    "Grant only necessary permissions (principle of least privilege)",
+    "Group related permissions logically",
+    "Admin roles inherit most permissions automatically",
+    "Review permissions regularly for security",
+  ],
+  general: [
+    "Test roles in development environment first",
+    "Document role purposes for team clarity",
+    "Regular audit of role assignments recommended",
+    "Inactive roles are hidden from user assignment",
+  ],
+  nextSteps: [
+    "Assign role to users after creation",
+    "Test role permissions in different applications",
+    "Set up role-based menu access if needed",
+    "Monitor role usage and effectiveness",
+  ],
+};
+
+// Form Validator Class
 export class RoleFormValidator {
   static validateField(
     fieldName: keyof CreateRoleFormData,
     value: any,
-    formData?: Partial<CreateRoleFormData>,
+    formData: CreateRoleFormData,
     mode: "create" | "edit" = "create"
   ): string | null {
-    try {
-      const schema = createRoleSchema.pick({ [fieldName]: true });
-      schema.parse({ [fieldName]: value });
-      return null;
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return error.issues[0]?.message || "Invalid value";
-      }
-      return "Validation error";
+    switch (fieldName) {
+      case "name":
+        if (!value || value.trim().length === 0) {
+          return "Role name is required";
+        }
+        if (value.trim().length < 3) {
+          return "Role name must be at least 3 characters long";
+        }
+        if (value.trim().length > 255) {
+          return "Role name cannot exceed 255 characters";
+        }
+        break;
+
+      case "code":
+        if (!value || value.trim().length === 0) {
+          return "Role code is required";
+        }
+        if (!/^[a-z0-9_]+$/.test(value)) {
+          return "Role code can only contain lowercase letters, numbers, and underscores";
+        }
+        if (value.length < 3) {
+          return "Role code must be at least 3 characters long";
+        }
+        if (value.length > 255) {
+          return "Role code cannot exceed 255 characters";
+        }
+        break;
+
+      case "description":
+        if (value && value.length > 1000) {
+          return "Description cannot exceed 1000 characters";
+        }
+        break;
+
+      case "permissions":
+        // Permissions are optional, but warn if none selected for non-admin roles
+        if (!formData.is_admin && (!value || value.length === 0)) {
+          return "Consider adding permissions for non-admin roles";
+        }
+        break;
+
+      case "applications":
+        // Applications are optional, but recommend at least one for usability
+        if (!value || value.length === 0) {
+          return "Consider adding at least one application for better user experience";
+        }
+        break;
+
+      default:
+        break;
     }
+
+    return null;
   }
 
-  static validateForm(data: CreateRoleFormData): Record<string, string> {
-    try {
-      createRoleSchema.parse(data);
-      return {};
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const errors: Record<string, string> = {};
-        error.issues.forEach((issue) => {
-          if (issue.path.length > 0) {
-            errors[issue.path[0] as string] = issue.message;
-          }
-        });
-        return errors;
+  static validateForm(formData: CreateRoleFormData): RoleFormErrors {
+    const errors: RoleFormErrors = {};
+
+    // Validate each field
+    Object.keys(formData).forEach((key) => {
+      const fieldName = key as keyof CreateRoleFormData;
+      const error = this.validateField(
+        fieldName,
+        formData[fieldName],
+        formData
+      );
+      // Only assign error if fieldName is a key of RoleFormErrors
+      if (
+        error &&
+        ["name", "code", "description", "permissions", "applications"].includes(
+          fieldName
+        )
+      ) {
+        errors[fieldName as keyof RoleFormErrors] = error;
       }
-      return { general: "Validation failed" };
-    }
+    });
+
+    return errors;
   }
 
-  static async validateUniqueCode(
-    code: string,
-    roleId?: number
-  ): Promise<boolean> {
-    // This would typically call an API to check uniqueness
-    // For now, return true (valid)
-    // In real implementation:
-    // const response = await roleService.checkCodeAvailability(code, roleId);
-    // return response.available;
-    return true;
+  static isFormValid(formData: CreateRoleFormData): boolean {
+    const errors = this.validateForm(formData);
+    return Object.keys(errors).length === 0;
   }
 }
+
+// Utility Functions
+export const getRoleDisplayName = (role: Role): string => {
+  return role.name || role.code;
+};
+
+export const getRoleStatusBadge = (
+  role: Role
+): { text: string; variant: "success" | "destructive" | "secondary" } => {
+  if (role.is_active) {
+    return { text: "Active", variant: "success" };
+  }
+  return { text: "Inactive", variant: "destructive" };
+};
+
+export const getRoleTypeBadge = (
+  role: Role
+): { text: string; variant: "default" | "secondary" } => {
+  if (role.is_admin) {
+    return { text: "Admin Role", variant: "default" };
+  }
+  return { text: "User Role", variant: "secondary" };
+};
+
+export const formatRolePermissions = (role: Role): string => {
+  const count = role.permissions_count || role.permissions?.length || 0;
+  return `${count} permission${count !== 1 ? "s" : ""}`;
+};
+
+export const formatRoleUsers = (role: Role): string => {
+  const count = role.users_count || role.users?.length || 0;
+  return `${count} user${count !== 1 ? "s" : ""}`;
+};
+
+export const formatRoleApplications = (role: Role): string => {
+  const count = role.applications_count || role.applications?.length || 0;
+  return `${count} application${count !== 1 ? "s" : ""}`;
+};

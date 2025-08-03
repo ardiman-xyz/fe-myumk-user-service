@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,17 +9,17 @@ import {
   Code,
   Type,
   Loader2,
-  Save,
   Rocket,
-  Key,
   Crown,
-  Users,
   CheckCircle,
+  AlertCircle,
+  Globe,
+  Key,
 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import { RoleFormValidator, type CreateRoleFormData } from "@/types/role";
-import ApplicationSelector from "./ApplicationSelector";
-import PermissionSelector from "./PermissionSelector";
+import IntegratedAppPermissionSelector from "./IntegratedAppPermissionSelector";
 
 interface RoleFormProps {
   onSubmit: (data: CreateRoleFormData) => Promise<void>;
@@ -161,7 +161,7 @@ const RoleForm: React.FC<RoleFormProps> = ({
     setTouchedFields(new Set(allFields));
 
     // Validate entire form
-    const formErrors = RoleFormValidator.validateForm(formData);
+    const formErrors = RoleFormValidator.validateForm(formData) as FormErrors;
     setErrors(formErrors);
 
     // If no errors, submit
@@ -330,42 +330,152 @@ const RoleForm: React.FC<RoleFormProps> = ({
               />
             </div>
           </div>
+
+          {/* Admin Role Warning */}
+          {formData.is_admin && (
+            <Alert className="border-purple-200 bg-purple-50">
+              <Crown className="h-4 w-4 text-purple-600" />
+              <AlertDescription className="text-purple-800">
+                <strong>Admin Role:</strong> This role will have elevated system
+                privileges. Admin roles typically inherit most permissions
+                automatically and should only be assigned to trusted users.
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
-      {/* Permissions Section */}
+      {/* Applications & Permissions Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5 text-orange-600" />
-            Permissions
+            <Globe className="h-5 w-5 text-indigo-600" />
+            Application Access & Permissions
+            <span className="text-sm text-gray-500 font-normal">
+              ({formData.applications.length} apps,{" "}
+              {formData.permissions.length} permissions)
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <PermissionSelector
-            selectedPermissions={formData.permissions || []}
-            onPermissionsChange={handlePermissionsChange}
-            disabled={isLoading}
-          />
+          <div className="space-y-3">
+            <div className="text-sm text-gray-600">
+              <p className="mb-2">
+                Select applications this role can access, then choose specific
+                permissions for each application and its menus.
+              </p>
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <Globe className="h-4 w-4 text-indigo-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-indigo-900">
+                      How it works:
+                    </p>
+                    <ul className="text-xs text-indigo-700 mt-1 space-y-1">
+                      <li>
+                        • First select which applications this role can access
+                      </li>
+                      <li>
+                        • Then expand each application to see available menus
+                        and permissions
+                      </li>
+                      <li>
+                        • Choose specific permissions for granular access
+                        control
+                      </li>
+                      <li>
+                        • Application access controls navigation, permissions
+                        control actions
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <IntegratedAppPermissionSelector
+              selectedApplications={formData.applications}
+              selectedPermissions={formData.permissions}
+              onApplicationsChange={handleApplicationsChange}
+              onPermissionsChange={handlePermissionsChange}
+              disabled={isLoading}
+            />
+
+            {(getFieldError("applications") ||
+              getFieldError("permissions")) && (
+              <Alert className="border-orange-200 bg-orange-50">
+                <AlertCircle className="h-4 w-4 text-orange-600" />
+                <AlertDescription className="text-orange-800">
+                  {getFieldError("applications") ||
+                    getFieldError("permissions")}
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Applications Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-indigo-600" />
-            Applications
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ApplicationSelector
-            selectedApplications={formData.applications || []}
-            onApplicationsChange={handleApplicationsChange}
-            disabled={isLoading}
-          />
-        </CardContent>
-      </Card>
+      {/* Form Summary */}
+      {(formData.permissions.length > 0 ||
+        formData.applications.length > 0) && (
+        <Card className="border-green-200 bg-green-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-800">
+              <CheckCircle className="h-5 w-5" />
+              Role Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-medium text-green-900 mb-2">
+                    Basic Info:
+                  </h4>
+                  <ul className="text-green-700 space-y-1">
+                    <li>• Name: {formData.name || "Not set"}</li>
+                    <li>• Code: {formData.code || "Not set"}</li>
+                    <li>
+                      • Type: {formData.is_admin ? "Admin Role" : "User Role"}
+                    </li>
+                    <li>
+                      • Status: {formData.is_active ? "Active" : "Inactive"}
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-medium text-green-900 mb-2">Access:</h4>
+                  <ul className="text-green-700 space-y-1">
+                    <li>• Applications: {formData.applications.length}</li>
+                    <li>• Permissions: {formData.permissions.length}</li>
+                    <li>• Admin Access: {formData.is_admin ? "Yes" : "No"}</li>
+                    <li>
+                      • Can be assigned: {formData.is_active ? "Yes" : "No"}
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {formData.applications.length > 0 && (
+                <div className="pt-3 border-t border-green-200">
+                  <h4 className="font-medium text-green-900 mb-2">
+                    Access Overview:
+                  </h4>
+                  <p className="text-xs text-green-700">
+                    This role will have access to {formData.applications.length}{" "}
+                    application{formData.applications.length !== 1 ? "s" : ""}
+                    with {formData.permissions.length} specific permission
+                    {formData.permissions.length !== 1 ? "s" : ""}. Users
+                    assigned this role will see only the applications selected
+                    above in their navigation and can only perform actions
+                    allowed by the selected permissions.
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Submit Button */}
       <div className="flex justify-end pt-6 border-t">
