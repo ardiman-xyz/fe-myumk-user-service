@@ -192,6 +192,27 @@ class ApplicationService {
   }
 
   /**
+   * Get active applications and permissions
+   */
+  async getActiveApplicationsAndPermission(): Promise<
+    ApiResponse<Application[]>
+  > {
+    try {
+      const response = await apiClient.get<ApiResponse<Application[]>>(
+        "/applications/active-permission",
+        { headers: this.getAuthHeaders() }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.data) {
+        return error.response.data;
+      }
+      throw new Error("Failed to fetch active applications");
+    }
+  }
+
+  /**
    * Get application statistics
    */
   async getApplicationStats(): Promise<ApiResponse<ApplicationStats>> {

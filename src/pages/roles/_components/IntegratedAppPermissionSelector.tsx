@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,8 @@ import {
   ShoppingCart,
   HelpCircle,
 } from "lucide-react";
+import { toast } from "sonner";
+import { applicationService } from "@/services/applicationService";
 
 interface Application {
   id: number;
@@ -75,299 +77,36 @@ const IntegratedAppPermissionSelector: React.FC<
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedApps, setExpandedApps] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(false);
 
-  // Mock data - replace with real API calls later
-  const applications: Application[] = [
-    {
-      id: 1,
-      name: "User Management System",
-      code: "user_mgmt",
-      description: "Complete user management and authentication system",
-      url: "https://users.example.com",
-      icon: "users",
-      is_active: true,
-      permissions: [
-        {
-          id: 1,
-          name: "Access User Management",
-          code: "user_mgmt.access",
-          description: "Can access the user management application",
-          resource: "user_mgmt",
-          action: "access",
-        },
-      ],
-      menus: [
-        {
-          id: 1,
-          name: "Users",
-          code: "users",
-          description: "Manage system users",
-          url: "/users",
-          sort_order: 1,
-          is_active: true,
-          permissions: [
-            {
-              id: 2,
-              name: "View Users",
-              code: "user_mgmt.users.view",
-              description: "Can view user list and details",
-              resource: "user_mgmt.users",
-              action: "view",
-              menu_id: 1,
-            },
-            {
-              id: 3,
-              name: "Create Users",
-              code: "user_mgmt.users.create",
-              description: "Can create new users",
-              resource: "user_mgmt.users",
-              action: "create",
-              menu_id: 1,
-            },
-            {
-              id: 4,
-              name: "Edit Users",
-              code: "user_mgmt.users.edit",
-              description: "Can edit user information",
-              resource: "user_mgmt.users",
-              action: "edit",
-              menu_id: 1,
-            },
-            {
-              id: 5,
-              name: "Delete Users",
-              code: "user_mgmt.users.delete",
-              description: "Can delete users",
-              resource: "user_mgmt.users",
-              action: "delete",
-              menu_id: 1,
-            },
-          ],
-        },
-        {
-          id: 2,
-          name: "Roles",
-          code: "roles",
-          description: "Manage user roles and permissions",
-          url: "/roles",
-          sort_order: 2,
-          is_active: true,
-          permissions: [
-            {
-              id: 6,
-              name: "View Roles",
-              code: "user_mgmt.roles.view",
-              description: "Can view role list and details",
-              resource: "user_mgmt.roles",
-              action: "view",
-              menu_id: 2,
-            },
-            {
-              id: 7,
-              name: "Create Roles",
-              code: "user_mgmt.roles.create",
-              description: "Can create new roles",
-              resource: "user_mgmt.roles",
-              action: "create",
-              menu_id: 2,
-            },
-            {
-              id: 8,
-              name: "Edit Roles",
-              code: "user_mgmt.roles.edit",
-              description: "Can edit role information",
-              resource: "user_mgmt.roles",
-              action: "edit",
-              menu_id: 2,
-            },
-            {
-              id: 9,
-              name: "Delete Roles",
-              code: "user_mgmt.roles.delete",
-              description: "Can delete roles",
-              resource: "user_mgmt.roles",
-              action: "delete",
-              menu_id: 2,
-            },
-          ],
-        },
-      ],
-    },
-    {
-      id: 2,
-      name: "Content Management",
-      code: "cms",
-      description: "Content creation and management platform",
-      url: "https://cms.example.com",
-      icon: "file-text",
-      is_active: true,
-      permissions: [
-        {
-          id: 10,
-          name: "Access CMS",
-          code: "cms.access",
-          description: "Can access the content management system",
-          resource: "cms",
-          action: "access",
-        },
-      ],
-      menus: [
-        {
-          id: 3,
-          name: "Articles",
-          code: "articles",
-          description: "Manage articles and blog posts",
-          url: "/articles",
-          sort_order: 1,
-          is_active: true,
-          permissions: [
-            {
-              id: 11,
-              name: "View Articles",
-              code: "cms.articles.view",
-              description: "Can view article list",
-              resource: "cms.articles",
-              action: "view",
-              menu_id: 3,
-            },
-            {
-              id: 12,
-              name: "Create Articles",
-              code: "cms.articles.create",
-              description: "Can create new articles",
-              resource: "cms.articles",
-              action: "create",
-              menu_id: 3,
-            },
-            {
-              id: 13,
-              name: "Edit Articles",
-              code: "cms.articles.edit",
-              description: "Can edit articles",
-              resource: "cms.articles",
-              action: "edit",
-              menu_id: 3,
-            },
-            {
-              id: 14,
-              name: "Delete Articles",
-              code: "cms.articles.delete",
-              description: "Can delete articles",
-              resource: "cms.articles",
-              action: "delete",
-              menu_id: 3,
-            },
-            {
-              id: 15,
-              name: "Publish Articles",
-              code: "cms.articles.publish",
-              description: "Can publish/unpublish articles",
-              resource: "cms.articles",
-              action: "publish",
-              menu_id: 3,
-            },
-          ],
-        },
-        {
-          id: 4,
-          name: "Media Library",
-          code: "media",
-          description: "Manage media files and assets",
-          url: "/media",
-          sort_order: 2,
-          is_active: true,
-          permissions: [
-            {
-              id: 16,
-              name: "View Media",
-              code: "cms.media.view",
-              description: "Can view media library",
-              resource: "cms.media",
-              action: "view",
-              menu_id: 4,
-            },
-            {
-              id: 17,
-              name: "Upload Media",
-              code: "cms.media.upload",
-              description: "Can upload new media files",
-              resource: "cms.media",
-              action: "upload",
-              menu_id: 4,
-            },
-            {
-              id: 18,
-              name: "Delete Media",
-              code: "cms.media.delete",
-              description: "Can delete media files",
-              resource: "cms.media",
-              action: "delete",
-              menu_id: 4,
-            },
-          ],
-        },
-      ],
-    },
-    {
-      id: 3,
-      name: "Analytics Dashboard",
-      code: "analytics",
-      description: "Business intelligence and reporting dashboard",
-      url: "https://analytics.example.com",
-      icon: "bar-chart",
-      is_active: true,
-      permissions: [
-        {
-          id: 19,
-          name: "Access Analytics",
-          code: "analytics.access",
-          description: "Can access analytics dashboard",
-          resource: "analytics",
-          action: "access",
-        },
-      ],
-      menus: [
-        {
-          id: 5,
-          name: "Reports",
-          code: "reports",
-          description: "View and generate reports",
-          url: "/reports",
-          sort_order: 1,
-          is_active: true,
-          permissions: [
-            {
-              id: 20,
-              name: "View Reports",
-              code: "analytics.reports.view",
-              description: "Can view existing reports",
-              resource: "analytics.reports",
-              action: "view",
-              menu_id: 5,
-            },
-            {
-              id: 21,
-              name: "Create Reports",
-              code: "analytics.reports.create",
-              description: "Can create custom reports",
-              resource: "analytics.reports",
-              action: "create",
-              menu_id: 5,
-            },
-            {
-              id: 22,
-              name: "Export Reports",
-              code: "analytics.reports.export",
-              description: "Can export reports to various formats",
-              resource: "analytics.reports",
-              action: "export",
-              menu_id: 5,
-            },
-          ],
-        },
-      ],
-    },
-  ];
+  const [applications, setApplications] = useState<Application[]>([]);
+
+  useEffect(() => {
+    // Load applications on mount
+    loadApplication();
+  }, []);
+
+  const loadApplication = async () => {
+    setLoading(true);
+    try {
+      // const currentFilters = newFilters || filters;
+      const response =
+        await applicationService.getActiveApplicationsAndPermission();
+
+      if (response.success && response.data) {
+        setApplications(response.data);
+      } else {
+        toast.error(response.message || "Failed to load permissions");
+        setApplications([]);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load permissions");
+      console.error("Error loading permissions:", error);
+      setApplications([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getAppIcon = (iconName: string) => {
     const icons = {

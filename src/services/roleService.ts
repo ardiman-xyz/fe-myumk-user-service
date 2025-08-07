@@ -10,7 +10,6 @@ import type {
   AssignPermissionsRequest,
   AssignUsersRequest,
   DuplicateRoleRequest,
-  Permission,
   User,
 } from "@/types/role";
 

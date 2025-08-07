@@ -2,7 +2,13 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle, AlertCircle, Shield } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle,
+  AlertCircle,
+  Shield,
+  Loader,
+} from "lucide-react";
 import { useTitle } from "@/hooks/useTitle";
 import { toast } from "sonner";
 import type { CreateRoleFormData, CreateRoleRequest } from "@/types/role";
@@ -20,7 +26,6 @@ const AddRolePage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState("");
 
   const handleFormSubmit = async (formData: CreateRoleFormData) => {
-    console.log("Form Data:", formData);
     setIsLoading(true);
     setSuccessMessage("");
     setErrorMessage("");
@@ -185,10 +190,10 @@ const AddRolePage: React.FC = () => {
 
       {/* Progress Indicator */}
       {isLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 flex items-center space-x-3">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-            <span className="text-gray-900 font-medium">Creating role...</span>
+        <div className="flex items-center justify-center p-8">
+          <div className="flex items-center space-x-2">
+            <Loader className="animate-spin h-6 w-6" />
+            <span className="text-gray-600">Loading permission...</span>
           </div>
         </div>
       )}
