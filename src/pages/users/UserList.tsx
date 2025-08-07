@@ -51,7 +51,7 @@ const UserListMain: React.FC = () => {
   });
 
   // Load users function
-  const loadUsers = async (newFilters?: UserFilters) => {
+  const loadUsers = async (newFilters?: any) => {
     setLoading(true);
     try {
       const currentFilters = newFilters || filters;
@@ -334,7 +334,6 @@ const UserListMain: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header Component */}
       <UserListHeader
         totalUsers={pagination.total}
         selectedCount={selectedUsers.length}
@@ -342,14 +341,12 @@ const UserListMain: React.FC = () => {
         onBulkAction={handleBulkAction}
       />
 
-      {/* Filters Component */}
       <UserListFilters
         filters={filters}
         onFiltersChange={handleFiltersChange}
         loading={loading}
       />
 
-      {/* Table Component */}
       <UserListTable
         users={users}
         selectedUsers={selectedUsers}
@@ -359,7 +356,6 @@ const UserListMain: React.FC = () => {
         onUserAction={handleUserAction}
       />
 
-      {/* Pagination Component */}
       <UserListPagination
         pagination={pagination}
         onPageChange={handlePageChange}

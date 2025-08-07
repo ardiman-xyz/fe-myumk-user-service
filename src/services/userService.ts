@@ -1,25 +1,11 @@
 // src/services/userService.ts
 import apiClient from "@/config/api";
+import type { Role } from "@/types/role";
+import type { User } from "@/types/user";
 
 // ================================
 // TYPES & INTERFACES
 // ================================
-
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  phone?: string;
-  avatar?: string;
-  is_active: boolean;
-  email_verified_at?: string;
-  last_login_at?: string;
-  created_at: string;
-  updated_at: string;
-  full_name: string;
-}
 
 export interface CreateUserRequest {
   username: string;

@@ -1,35 +1,27 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { 
-  ArrowLeft, 
-  CheckCircle,
-  AlertCircle,
-  Users
-} from 'lucide-react';
-import { useTitle } from '@/hooks/useTitle';
-import { toast } from 'sonner';
-import type { CreateUserFormData, CreateUserRequest } from '@/types/user';
-import UserForm from './_components/UserForm';
-import UserCreateInfo from './_components/UserCreateInfo';
-import { userService } from '@/services/userService';
-
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, CheckCircle, AlertCircle, Users } from "lucide-react";
+import { useTitle } from "@/hooks/useTitle";
+import { toast } from "sonner";
+import type { CreateUserFormData, CreateUserRequest } from "@/types/user";
+import UserForm from "./_components/UserForm";
+import UserCreateInfo from "./_components/UserCreateInfo";
+import { userService } from "@/services/userService";
 
 const AddUserPage: React.FC = () => {
-  useTitle('Add User - User Service');
+  useTitle("Add User - User Service");
   const navigate = useNavigate();
-  
+
   const [isLoading, setIsLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleFormSubmit = async (formData: CreateUserFormData) => {
-
-    console.log('Form Data:', formData);
     setIsLoading(true);
-    setSuccessMessage('');
-    setErrorMessage('');
+    setSuccessMessage("");
+    setErrorMessage("");
 
     try {
       // Prepare data for API (remove confirmPassword)
@@ -39,42 +31,45 @@ const AddUserPage: React.FC = () => {
       // Call API
       const response = await userService.createUser(apiData);
 
+      console.info("API Response:", response);
+
       if (response.success && response.data) {
-        setSuccessMessage(`User "${response.data.full_name}" created successfully!`);
-        
+        setSuccessMessage(
+          `User "${response.data.first_name}" created successfully!`
+        );
+
         // Show success toast
-        toast.success('User created successfully!', {
-          description: `${response.data.full_name} has been added to the system.`,
+        toast.success("User created successfully!", {
+          description: `${response.data.first_name} has been added to the system.`,
         });
 
         // Redirect after a short delay
-        setTimeout(() => {
-          navigate('/users');
-        }, 1000);
 
+        setTimeout(() => {
+          navigate("/users");
+        }, 1000);
       } else {
         // Handle API errors
         if (response.errors) {
           const errorMessages = Object.values(response.errors).flat();
-          setErrorMessage(errorMessages.join(', '));
+          setErrorMessage(errorMessages.join(", "));
         } else {
-          setErrorMessage(response.message || 'Failed to create user');
+          setErrorMessage(response.message || "Failed to create user");
         }
-        
-        toast.error('Failed to create user', {
-          description: response.message || 'Please check the form and try again.',
+
+        toast.error("Failed to create user", {
+          description:
+            response.message || "Please check the form and try again.",
         });
       }
-
     } catch (error: any) {
-      console.error('Error creating user:', error);
-      const errorMsg = error.message || 'An unexpected error occurred';
+      console.error("Error creating user:", error);
+      const errorMsg = error.message || "An unexpected error occurred";
       setErrorMessage(errorMsg);
-      
-      toast.error('Error creating user', {
+
+      toast.error("Error creating user", {
         description: errorMsg,
       });
-
     } finally {
       setIsLoading(false);
     }
@@ -82,24 +77,24 @@ const AddUserPage: React.FC = () => {
 
   const handleQuickAction = (actionId: string) => {
     switch (actionId) {
-      case 'create-assign-role':
-        toast.info('Feature coming soon', {
-          description: 'Create & Assign Role feature will be available soon.',
+      case "create-assign-role":
+        toast.info("Feature coming soon", {
+          description: "Create & Assign Role feature will be available soon.",
         });
         break;
-      case 'bulk-create':
-        toast.info('Feature coming soon', {
-          description: 'Bulk user creation feature will be available soon.',
+      case "bulk-create":
+        toast.info("Feature coming soon", {
+          description: "Bulk user creation feature will be available soon.",
         });
         break;
-      case 'import-csv':
-        toast.info('Feature coming soon', {
-          description: 'CSV import feature will be available soon.',
+      case "import-csv":
+        toast.info("Feature coming soon", {
+          description: "CSV import feature will be available soon.",
         });
         break;
-      case 'templates':
-        toast.info('Feature coming soon', {
-          description: 'User templates feature will be available soon.',
+      case "templates":
+        toast.info("Feature coming soon", {
+          description: "User templates feature will be available soon.",
         });
         break;
       default:
@@ -112,7 +107,7 @@ const AddUserPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Link 
+          <Link
             to="/users"
             className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
           >
@@ -125,14 +120,16 @@ const AddUserPage: React.FC = () => {
               <Users className="h-6 w-6 text-blue-600" />
               Add New User
             </h1>
-            <p className="text-sm text-gray-600">Create a new user account for the system</p>
+            <p className="text-sm text-gray-600">
+              Create a new user account for the system
+            </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/users')}
+          <Button
+            variant="outline"
+            onClick={() => navigate("/users")}
             disabled={isLoading}
           >
             Cancel
@@ -154,9 +151,7 @@ const AddUserPage: React.FC = () => {
       {errorMessage && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {errorMessage}
-          </AlertDescription>
+          <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       )}
 
