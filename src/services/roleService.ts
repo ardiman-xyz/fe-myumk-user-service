@@ -12,6 +12,7 @@ import type {
   DuplicateRoleRequest,
   User,
 } from "@/types/role";
+import type { RoleEditResponse } from "@/types/roleEditTypes";
 
 class RoleService {
   private getAuthHeaders() {
@@ -49,11 +50,14 @@ class RoleService {
   /**
    * Get single role by ID
    */
-  async getRoleById(id: number): Promise<ApiResponse<Role>> {
+  async getRoleById(id: number): Promise<ApiResponse<RoleEditResponse>> {
     try {
-      const response = await apiClient.get<ApiResponse<Role>>(`/roles/${id}`, {
-        headers: this.getAuthHeaders(),
-      });
+      const response = await apiClient.get<ApiResponse<RoleEditResponse>>(
+        `/roles/${id}`,
+        {
+          headers: this.getAuthHeaders(),
+        }
+      );
 
       return response.data;
     } catch (error: any) {

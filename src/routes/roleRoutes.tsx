@@ -1,11 +1,10 @@
-import AddRolePage from "@/pages/roles/AddRolePage";
-import EditUserPage from "@/pages/users/EditUserPage";
-import UserCreate from "@/pages/users/UserCreate";
 import { Loader } from "lucide-react";
 import { lazy, Suspense } from "react";
 import type { RouteObject } from "react-router";
 
 const RoleList = lazy(() => import("@/pages/roles/RolesList"));
+const AddRolePage = lazy(() => import("@/pages/roles/AddRolePage"));
+const EditUserPage = lazy(() => import("@/pages/roles/RoleEdit"));
 
 const RolesPageLoader = () => (
   <div className="flex items-center justify-center p-8">
@@ -33,6 +32,14 @@ export const roleRoutes: RouteObject[] = [
         element: (
           <Suspense fallback={<RolesPageLoader />}>
             <AddRolePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: ":id/edit",
+        element: (
+          <Suspense fallback={<Loader className="animate-spin h-6 w-6" />}>
+            <EditUserPage />
           </Suspense>
         ),
       },

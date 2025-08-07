@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,185 +9,110 @@ import {
   Code,
   Type,
   Loader2,
-  Rocket,
+  Save,
   Crown,
   CheckCircle,
   AlertCircle,
   Globe,
-  Key,
+  Lock,
+  Info,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import type {
+  RoleEditFormData,
+  ApplicationWithChecked,
+} from "@/types/roleEditTypes";
+import ApplicationPermissionSelectorWithChecked from "./ApplicationPermissionSelectorWithChecked";
 
-import { RoleFormValidator, type CreateRoleFormData } from "@/types/role";
-import IntegratedAppPermissionSelector from "./IntegratedAppPermissionSelector";
-
-interface RoleFormProps {
-  onSubmit: (data: CreateRoleFormData) => Promise<void>;
+interface RoleEditFormProps {
+  onSubmit: (data: RoleEditFormData) => Promise<void>;
   isLoading?: boolean;
-  initialData?: Partial<CreateRoleFormData>;
-  mode?: "create" | "edit";
+  availableApplications: ApplicationWithChecked[];
+  formData: RoleEditFormData;
+  onFormDataChange: (field: keyof RoleEditFormData, value: any) => void;
+  onApplicationsChange: (applications: number[]) => void;
+  onPermissionsChange: (permissions: number[]) => void;
+  disabled?: boolean;
 }
 
-interface FormErrors {
-  [key: string]: string;
-}
-
-const RoleForm: React.FC<RoleFormProps> = ({
+const RoleEditForm: React.FC<RoleEditFormProps> = ({
   onSubmit,
   isLoading = false,
-  initialData = {},
-  mode = "create",
+  availableApplications,
+  formData,
+  onFormDataChange,
+  onApplicationsChange,
+  onPermissionsChange,
+  disabled = false,
 }) => {
-  console.info("RoleForm initialized", { mode, initialData });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const [formData, setFormData] = useState<CreateRoleFormData>({
-    name: "",
-    code: "",
-    description: "",
-    is_admin: false,
-    is_active: true,
-    permissions: [],
-    applications: [],
-    ...initialData,
-  });
+  // Track changes for unsaved warning
+  useEffect(() => {
+    // This would compare with original data if needed
+    setHasUnsavedChanges(true);
+  }, [formData]);
 
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
-  const [codeGenerated, setCodeGenerated] = useState(false);
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
 
-  const validateField = useCallback(
-    (fieldName: keyof CreateRoleFormData, value: any) => {
-      const error = RoleFormValidator.validateField(
-        fieldName,
-        value,
-        formData,
-        mode
-      );
-
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        if (error) {
-          newErrors[fieldName] = error;
-        } else {
-          delete newErrors[fieldName];
-        }
-        return newErrors;
-      });
-    },
-    [formData, mode]
-  );
-
-  // Auto-generate code from name
-  const generateCodeFromName = (name: string) => {
-    if (!name || codeGenerated) return "";
-
-    return name
-      .toLowerCase()
-      .replace(/[^a-zA-Z0-9\s]/g, "") // Remove special characters
-      .replace(/\s+/g, "_") // Replace spaces with underscores
-      .replace(/_{2,}/g, "_") // Replace multiple underscores with single
-      .replace(/^_|_$/g, ""); // Remove leading/trailing underscores
-  };
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value, type } = e.target;
-    const fieldName = name as keyof CreateRoleFormData;
-
-    let newValue: any = value;
-    if (type === "checkbox") {
-      newValue = (e.target as HTMLInputElement).checked;
+    if (!formData.name.trim()) {
+      newErrors.name = "Role name is required";
     }
 
-    setFormData((prev) => ({
-      ...prev,
-      [fieldName]: newValue,
-    }));
-
-    // Auto-generate code when name changes (only for create mode)
-    if (fieldName === "name" && mode === "create" && !codeGenerated) {
-      const generatedCode = generateCodeFromName(value);
-      if (generatedCode) {
-        setFormData((prev) => ({
-          ...prev,
-          code: generatedCode,
-        }));
-      }
+    if (formData.name.length < 3) {
+      newErrors.name = "Role name must be at least 3 characters";
     }
 
-    // Mark field as touched and validate
-    if (touchedFields.has(fieldName)) {
-      validateField(fieldName, newValue);
-    }
-  };
-
-  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { value } = e.target;
-    setCodeGenerated(true); // Mark as manually edited
-    setFormData((prev) => ({
-      ...prev,
-      code: value,
-    }));
-
-    if (touchedFields.has("code")) {
-      validateField("code", value);
-    }
-  };
-
-  const handleBlur = (
-    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const fieldName = e.target.name as keyof CreateRoleFormData;
-    setTouchedFields((prev) => new Set(prev).add(fieldName));
-    validateField(fieldName, formData[fieldName]);
-  };
-
-  const handlePermissionsChange = (selectedPermissions: number[]) => {
-    setFormData((prev) => ({
-      ...prev,
-      permissions: selectedPermissions,
-    }));
-  };
-
-  const handleApplicationsChange = (selectedApplications: number[]) => {
-    setFormData((prev) => ({
-      ...prev,
-      applications: selectedApplications,
-    }));
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
-    // Mark all fields as touched
-    const allFields = Object.keys(formData) as Array<keyof CreateRoleFormData>;
-    setTouchedFields(new Set(allFields));
+    if (!validateForm()) return;
 
-    // Validate entire form
-    const formErrors = RoleFormValidator.validateForm(formData) as FormErrors;
-    setErrors(formErrors);
+    await onSubmit(formData);
+  };
 
-    // If no errors, submit
-    if (Object.keys(formErrors).length === 0) {
-      await onSubmit(formData);
+  const handleInputChange = (field: keyof RoleEditFormData, value: any) => {
+    onFormDataChange(field, value);
+
+    // Clear error for this field when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
     }
   };
 
-  const getFieldError = (fieldName: string): string | undefined => {
-    return touchedFields.has(fieldName) ? errors[fieldName] : undefined;
-  };
-
-  const isFieldInvalid = (fieldName: string): boolean => {
-    return touchedFields.has(fieldName) && !!errors[fieldName];
-  };
+  const isFormValid =
+    formData.name.trim().length >= 3 && Object.keys(errors).length === 0;
 
   return (
     <div className="space-y-6">
+      {/* Unsaved Changes Warning */}
+      {hasUnsavedChanges && (
+        <Alert className="border-yellow-200 bg-yellow-50">
+          <Info className="h-4 w-4 text-yellow-600" />
+          <AlertDescription className="text-yellow-800">
+            You have unsaved changes. Make sure to save your changes before
+            leaving this page.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Basic Information */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-blue-600" />
             Basic Information
+            <span className="text-sm text-gray-500 font-normal ml-2">
+              (Edit Mode)
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -203,14 +128,12 @@ const RoleForm: React.FC<RoleFormProps> = ({
               type="text"
               placeholder="Enter role name (e.g., Content Manager)"
               value={formData.name}
-              onChange={handleInputChange}
-              onBlur={handleBlur}
-              className={isFieldInvalid("name") ? "border-red-500" : ""}
-              disabled={isLoading}
-              aria-invalid={isFieldInvalid("name")}
+              onChange={(e) => handleInputChange("name", e.target.value)}
+              className={errors.name ? "border-red-500" : ""}
+              disabled={isLoading || disabled}
             />
-            {getFieldError("name") && (
-              <p className="text-sm text-red-600">{getFieldError("name")}</p>
+            {errors.name && (
+              <p className="text-sm text-red-600">{errors.name}</p>
             )}
             <p className="text-xs text-gray-500">
               Choose a descriptive name that clearly indicates the role's
@@ -218,31 +141,27 @@ const RoleForm: React.FC<RoleFormProps> = ({
             </p>
           </div>
 
-          {/* Role Code */}
+          {/* Role Code (Read-only) */}
           <div className="space-y-2">
             <Label htmlFor="code" className="flex items-center gap-1">
               <Code className="h-3 w-3" />
               Role Code *
+              <Lock className="h-3 w-3 text-gray-400 ml-1" />
             </Label>
-            <Input
-              id="code"
-              name="code"
-              type="text"
-              placeholder="Enter role code (e.g., content_manager)"
-              value={formData.code}
-              onChange={handleCodeChange}
-              onBlur={handleBlur}
-              className={isFieldInvalid("code") ? "border-red-500" : ""}
-              disabled={isLoading || mode === "edit"}
-              aria-invalid={isFieldInvalid("code")}
-            />
-            {getFieldError("code") && (
-              <p className="text-sm text-red-600">{getFieldError("code")}</p>
-            )}
+            <div className="relative">
+              <Input
+                id="code"
+                name="code"
+                type="text"
+                value={formData.code || ""}
+                className="bg-gray-50 text-gray-600"
+                disabled={true}
+                readOnly
+              />
+              <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            </div>
             <p className="text-xs text-gray-500">
-              {mode === "edit"
-                ? "Role code cannot be changed after creation"
-                : "Unique identifier using lowercase letters, numbers, and underscores only"}
+              Role code cannot be changed after creation for security reasons
             </p>
           </div>
 
@@ -254,17 +173,10 @@ const RoleForm: React.FC<RoleFormProps> = ({
               name="description"
               placeholder="Describe the role's purpose and responsibilities..."
               value={formData.description}
-              onChange={handleInputChange}
-              onBlur={handleBlur}
-              className={isFieldInvalid("description") ? "border-red-500" : ""}
-              disabled={isLoading}
+              onChange={(e) => handleInputChange("description", e.target.value)}
+              disabled={isLoading || disabled}
               rows={3}
             />
-            {getFieldError("description") && (
-              <p className="text-sm text-red-600">
-                {getFieldError("description")}
-              </p>
-            )}
             <p className="text-xs text-gray-500">
               Optional description to help others understand this role's purpose
             </p>
@@ -300,9 +212,11 @@ const RoleForm: React.FC<RoleFormProps> = ({
                 name="is_admin"
                 type="checkbox"
                 checked={formData.is_admin}
-                onChange={handleInputChange}
+                onChange={(e) =>
+                  handleInputChange("is_admin", e.target.checked)
+                }
                 className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                disabled={isLoading}
+                disabled={isLoading || disabled}
               />
             </div>
           </div>
@@ -316,7 +230,7 @@ const RoleForm: React.FC<RoleFormProps> = ({
                   Active Role
                 </h4>
                 <p className="text-xs text-gray-600">
-                  Only active roles can be assigned to users
+                  Deactivating will immediately affect all assigned users
                 </p>
               </div>
             </div>
@@ -326,9 +240,11 @@ const RoleForm: React.FC<RoleFormProps> = ({
                 name="is_active"
                 type="checkbox"
                 checked={formData.is_active}
-                onChange={handleInputChange}
+                onChange={(e) =>
+                  handleInputChange("is_active", e.target.checked)
+                }
                 className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                disabled={isLoading}
+                disabled={isLoading || disabled}
               />
             </div>
           </div>
@@ -341,6 +257,18 @@ const RoleForm: React.FC<RoleFormProps> = ({
                 <strong>Admin Role:</strong> This role will have elevated system
                 privileges. Admin roles typically inherit most permissions
                 automatically and should only be assigned to trusted users.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Deactivation Warning */}
+          {!formData.is_active && (
+            <Alert className="border-orange-200 bg-orange-50">
+              <AlertCircle className="h-4 w-4 text-orange-600" />
+              <AlertDescription className="text-orange-800">
+                <strong>Warning:</strong> Deactivating this role will
+                immediately remove access for all users currently assigned to
+                it.
               </AlertDescription>
             </Alert>
           )}
@@ -371,23 +299,19 @@ const RoleForm: React.FC<RoleFormProps> = ({
                   <Globe className="h-4 w-4 text-indigo-600 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-indigo-900">
-                      How it works:
+                      Edit Mode - Current Selections:
                     </p>
                     <ul className="text-xs text-indigo-700 mt-1 space-y-1">
+                      <li>• Checkboxes show current role permissions</li>
                       <li>
-                        • First select which applications this role can access
+                        • Changes will affect all users assigned to this role
                       </li>
                       <li>
-                        • Then expand each application to see available menus
-                        and permissions
+                        • Application access controls navigation visibility
                       </li>
                       <li>
-                        • Choose specific permissions for granular access
-                        control
-                      </li>
-                      <li>
-                        • Application access controls navigation, permissions
-                        control actions
+                        • Specific permissions control what actions users can
+                        perform
                       </li>
                     </ul>
                   </div>
@@ -395,24 +319,14 @@ const RoleForm: React.FC<RoleFormProps> = ({
               </div>
             </div>
 
-            <IntegratedAppPermissionSelector
+            <ApplicationPermissionSelectorWithChecked
+              initialApplications={availableApplications}
               selectedApplications={formData.applications}
               selectedPermissions={formData.permissions}
-              onApplicationsChange={handleApplicationsChange}
-              onPermissionsChange={handlePermissionsChange}
-              disabled={isLoading}
+              onApplicationsChange={onApplicationsChange}
+              onPermissionsChange={onPermissionsChange}
+              disabled={isLoading || disabled}
             />
-
-            {(getFieldError("applications") ||
-              getFieldError("permissions")) && (
-              <Alert className="border-orange-200 bg-orange-50">
-                <AlertCircle className="h-4 w-4 text-orange-600" />
-                <AlertDescription className="text-orange-800">
-                  {getFieldError("applications") ||
-                    getFieldError("permissions")}
-                </AlertDescription>
-              </Alert>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -424,7 +338,7 @@ const RoleForm: React.FC<RoleFormProps> = ({
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-green-800">
               <CheckCircle className="h-5 w-5" />
-              Role Summary
+              Updated Role Summary
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -436,7 +350,6 @@ const RoleForm: React.FC<RoleFormProps> = ({
                   </h4>
                   <ul className="text-green-700 space-y-1">
                     <li>• Name: {formData.name || "Not set"}</li>
-                    <li>• Code: {formData.code || "Not set"}</li>
                     <li>
                       • Type: {formData.is_admin ? "Admin Role" : "User Role"}
                     </li>
@@ -458,22 +371,16 @@ const RoleForm: React.FC<RoleFormProps> = ({
                 </div>
               </div>
 
-              {formData.applications.length > 0 && (
-                <div className="pt-3 border-t border-green-200">
-                  <h4 className="font-medium text-green-900 mb-2">
-                    Access Overview:
-                  </h4>
-                  <p className="text-xs text-green-700">
-                    This role will have access to {formData.applications.length}{" "}
-                    application{formData.applications.length !== 1 ? "s" : ""}
-                    with {formData.permissions.length} specific permission
-                    {formData.permissions.length !== 1 ? "s" : ""}. Users
-                    assigned this role will see only the applications selected
-                    above in their navigation and can only perform actions
-                    allowed by the selected permissions.
-                  </p>
-                </div>
-              )}
+              <div className="pt-3 border-t border-green-200">
+                <h4 className="font-medium text-green-900 mb-2">
+                  Impact of Changes:
+                </h4>
+                <p className="text-xs text-green-700">
+                  This role update will immediately affect all users currently
+                  assigned to this role. They will gain or lose access based on
+                  the new application and permission selections.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -483,18 +390,18 @@ const RoleForm: React.FC<RoleFormProps> = ({
       <div className="flex justify-end pt-6 border-t">
         <Button
           onClick={handleSubmit}
-          disabled={isLoading || Object.keys(errors).length > 0}
+          disabled={isLoading || !isFormValid}
           className="min-w-[140px]"
         >
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {mode === "create" ? "Creating..." : "Updating..."}
+              Updating...
             </>
           ) : (
             <>
-              <Rocket className="mr-2 h-4 w-4" />
-              {mode === "create" ? "Create Role" : "Update Role"}
+              <Save className="mr-2 h-4 w-4" />
+              Update Role
             </>
           )}
         </Button>
@@ -503,4 +410,4 @@ const RoleForm: React.FC<RoleFormProps> = ({
   );
 };
 
-export default RoleForm;
+export default RoleEditForm;
