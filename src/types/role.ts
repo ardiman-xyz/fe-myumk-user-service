@@ -16,6 +16,12 @@ export interface Role {
   users?: User[];
 }
 
+export interface AdvancedRoleOptions {
+  allow_direct_user_access: boolean;
+  inherit_user_privileges: boolean;
+  privilege_precedence: "role_first" | "user_first" | "most_permissive";
+}
+
 export interface Permission {
   id: number;
   name: string;
@@ -26,6 +32,19 @@ export interface Permission {
   created_at: string;
   updated_at: string;
   roles_count?: number;
+}
+
+export interface EnhancedCreateRoleFormData extends CreateRoleFormData {
+  advanced_options?: AdvancedRoleOptions;
+  // Untuk future use - template user privileges
+  template_user_privileges?: {
+    applications: number[];
+    menus: Array<{
+      menu_id: number;
+      permissions: ("view" | "create" | "edit" | "delete")[];
+    }>;
+    permissions: number[];
+  };
 }
 
 export interface Application {

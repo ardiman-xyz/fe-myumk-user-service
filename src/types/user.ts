@@ -1,5 +1,7 @@
 // src/types/user.ts
 import { z, ZodError } from "zod";
+import type { Application, Menu } from "./application";
+import type { Permission } from "./permission";
 
 // Base User interface
 export interface User {
@@ -439,4 +441,80 @@ export interface BulkOperationResult {
     user_id: number;
     error: string;
   }>;
+}
+
+export interface UserApplication {
+  id: number;
+  user_id: number;
+  application_id: number;
+  granted_by: number;
+  granted_at: string;
+  expires_at?: string;
+  is_active: boolean;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  // Relations
+  application?: Application;
+  granted_by_user?: User;
+}
+
+export interface UserMenu {
+  id: number;
+  user_id: number;
+  menu_id: number;
+  can_view: boolean;
+  can_create: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+  granted_by: number;
+  granted_at: string;
+  expires_at?: string;
+  is_active: boolean;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  // Relations
+  menu?: Menu;
+  granted_by_user?: User;
+}
+
+export interface UserPermission {
+  id: number;
+  user_id: number;
+  permission_id: number;
+  granted_by: number;
+  granted_at: string;
+  expires_at?: string;
+  is_active: boolean;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  // Relations
+  permission?: Permission;
+  granted_by_user?: User;
+}
+
+// Enhanced User interface - tambahkan ke existing User interface
+export interface EnhancedUser extends User {
+  // Direct privileges
+  user_applications?: UserApplication[];
+  user_menus?: UserMenu[];
+  user_permissions?: UserPermission[];
+
+  // Privilege counts
+  direct_applications_count?: number;
+  direct_menus_count?: number;
+  direct_permissions_count?: number;
+
+  // Summary information
+  access_summary?: {
+    total_applications: number;
+    total_menus: number;
+    total_permissions: number;
+    direct_applications: number;
+    direct_menus: number;
+    direct_permissions: number;
+    has_direct_access: boolean;
+  };
 }

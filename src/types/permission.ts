@@ -1,4 +1,5 @@
 import { z, ZodError } from "zod";
+import type { User, UserPermission } from "./user";
 
 export interface Permission {
   id: number;
@@ -11,6 +12,9 @@ export interface Permission {
   updated_at: string;
   roles_count?: number;
   users_count?: number;
+  user_permissions?: UserPermission[];
+  direct_users?: User[];
+  direct_users_count?: number;
 }
 
 export interface PermissionFilters {

@@ -111,8 +111,6 @@ const RoleSelector: React.FC<RoleSelectorProps> = ({
     onRolesChange([]);
   };
 
-  console.info("Selected roles:", roles);
-
   const getRoleIcon = (role: Role) => {
     if (role.is_admin) {
       return <Crown className="h-4 w-4 text-purple-600" />;

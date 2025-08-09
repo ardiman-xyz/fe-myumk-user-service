@@ -1,4 +1,5 @@
 import { z, ZodError } from "zod";
+import type { User, UserApplication } from "./user";
 
 export interface Application {
   id: number;
@@ -14,6 +15,9 @@ export interface Application {
   menus_count?: number;
   roles?: Role[];
   menus?: Menu[];
+  user_applications?: UserApplication[];
+  direct_users?: User[];
+  direct_users_count?: number;
 }
 
 export interface Role {

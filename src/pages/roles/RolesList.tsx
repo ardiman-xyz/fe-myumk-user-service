@@ -200,7 +200,6 @@ const RolesList: React.FC = () => {
           break;
 
         case "export-selected":
-          toast.info("Export selected roles feature coming soon");
           break;
 
         case "delete":
@@ -241,7 +240,6 @@ const RolesList: React.FC = () => {
         // Close modal
         setDeleteRole(null);
 
-        // Remove from selected roles if it was selected
         setSelectedRoles((prev) => prev.filter((id) => id !== roleId));
 
         // Update roles list immediately for better UX

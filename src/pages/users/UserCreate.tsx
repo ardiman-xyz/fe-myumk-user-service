@@ -10,6 +10,13 @@ import UserForm from "./_components/UserForm";
 import UserCreateInfo from "./_components/UserCreateInfo";
 import { userService } from "@/services/userService";
 
+interface PrivilegeData {
+  selectedApplications: number[];
+  selectedPermissions: number[];
+  notes: string;
+  expiration: string;
+}
+
 const AddUserPage: React.FC = () => {
   useTitle("Add User - User Service");
   const navigate = useNavigate();
@@ -18,20 +25,36 @@ const AddUserPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const handleFormSubmit = async (formData: CreateUserFormData) => {
+  const handleFormSubmit = async (
+    formData: CreateUserFormData,
+    privilegeData: PrivilegeData
+  ) => {
     setIsLoading(true);
     setSuccessMessage("");
     setErrorMessage("");
 
     try {
-      // Prepare data for API (remove confirmPassword)
       const { confirmPassword, ...requestData } = formData;
-      const apiData: CreateUserRequest = requestData;
 
-      // Call API
+      // Gabungkan form data dengan privilege data
+      const apiData: any = {
+        ...requestData,
+        // Tambahkan privilege data jika ada yang dipilih
+        ...(privilegeData.selectedApplications.length > 0 && {
+          selectedApplications: privilegeData.selectedApplications,
+        }),
+        ...(privilegeData.selectedPermissions.length > 0 && {
+          selectedPermissions: privilegeData.selectedPermissions,
+        }),
+        ...(privilegeData.notes.trim() && {
+          privilegeNotes: privilegeData.notes.trim(),
+        }),
+        ...(privilegeData.expiration && {
+          privilegeExpiration: privilegeData.expiration,
+        }),
+      };
+
       const response = await userService.createUser(apiData);
-
-      console.info("API Response:", response);
 
       if (response.success && response.data) {
         setSuccessMessage(

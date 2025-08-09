@@ -22,9 +22,13 @@ import {
   type UpdateUserFormData,
 } from "@/types/user";
 import RoleSelector from "./RoleSelector"; // Import your RoleSelector component
+import UserPrivilegeSection from "./UserPrivilegeSection";
 
 interface UserFormProps {
-  onSubmit: (data: CreateUserFormData) => Promise<void>;
+  onSubmit: (
+    formData: CreateUserFormData,
+    privilegeData: PrivilegeData
+  ) => Promise<void>;
   isLoading?: boolean;
   initialData?: Partial<CreateUserFormData>;
   mode?: "create" | "edit";
@@ -32,6 +36,13 @@ interface UserFormProps {
 
 interface FormErrors {
   [key: string]: string;
+}
+
+interface PrivilegeData {
+  selectedApplications: number[];
+  selectedPermissions: number[];
+  notes: string;
+  expiration: string;
 }
 
 const UserForm: React.FC<UserFormProps> = ({
@@ -57,6 +68,13 @@ const UserForm: React.FC<UserFormProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+
+  const [privilegeData, setPrivilegeData] = useState<PrivilegeData>({
+    selectedApplications: [],
+    selectedPermissions: [],
+    notes: "",
+    expiration: "",
+  });
 
   const validateField = useCallback(
     (fieldName: keyof CreateUserFormData, value: any) => {
@@ -178,7 +196,7 @@ const UserForm: React.FC<UserFormProps> = ({
 
     // If valid, submit
     if (isValid) {
-      await onSubmit(formData);
+      await onSubmit(formData, privilegeData);
     }
   };
 
@@ -191,6 +209,11 @@ const UserForm: React.FC<UserFormProps> = ({
   };
 
   const isPasswordRequired = mode === "create";
+
+  const handlePrivilegeChange = (data: PrivilegeData) => {
+    setPrivilegeData(data);
+    console.info("Privilege data updated:", data);
+  };
 
   return (
     <div className="space-y-6">
@@ -545,6 +568,10 @@ const UserForm: React.FC<UserFormProps> = ({
           </CardContent>
         </Card>
       )}
+
+      <div>
+        <UserPrivilegeSection onPrivilegeChange={handlePrivilegeChange} />
+      </div>
 
       {/* Submit Button */}
       <div className="flex justify-end pt-6 border-t">
