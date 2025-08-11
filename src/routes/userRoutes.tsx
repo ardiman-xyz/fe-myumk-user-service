@@ -1,5 +1,6 @@
 import EditUserPage from "@/pages/users/EditUserPage";
 import UserCreate from "@/pages/users/UserCreate";
+import UserDetail from "@/pages/users/UserDetail";
 import { Loader } from "lucide-react";
 import { lazy, Suspense } from "react";
 import type { RouteObject } from "react-router";
@@ -43,14 +44,14 @@ export const userRoutes: RouteObject[] = [
           </Suspense>
         ),
       },
-      // {
-      //   path: ':id/edit',
-      //   element: (
-      //     <Suspense fallback={<UserPageLoader />}>
-      //       <UserEdit />
-      //     </Suspense>
-      //   ),
-      // },
+      {
+        path: ":id",
+        element: (
+          <Suspense fallback={<UserPageLoader />}>
+            <UserDetail />
+          </Suspense>
+        ),
+      },
     ],
   },
 ];
