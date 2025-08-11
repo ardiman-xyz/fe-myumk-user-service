@@ -1,175 +1,367 @@
-import React from "react";
-import { User, Mail, Phone, UserCircle, Edit3, Save, X } from "lucide-react";
+// src/pages/users/_components/PersonalInformationSection.tsx
+import { useState, useEffect } from "react";
+import { useParams } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Loader2,
+  User,
+  Mail,
+  Phone,
+  Calendar,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
+import { userDetailService } from "@/services/userDetailService";
+import { useUserDetail } from "@/hooks/useUserDetail";
+import type { UpdateUserDetailRequest } from "@/types/userDetail";
 
-const personalInfoSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  username: z.string().min(1, "Username is required"),
-  email: z.string().min(1, "Email is required").email("Invalid email"),
-  phoneNumber: z.string().optional(),
-});
-
-type PersonalInfoFormData = z.infer<typeof personalInfoSchema>;
-
-const PersonalInformationSection: React.FC = () => {
-  const [isEditing, setIsEditing] = React.useState(false);
+const PersonalInformationSection = () => {
+  const { id } = useParams<{ id: string }>();
+  const userId = id ? parseInt(id) : null;
 
   const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<PersonalInfoFormData>({
-    resolver: zodResolver(personalInfoSchema),
-    defaultValues: {
-      firstName: "Selvi",
-      lastName: "Ekawati",
-      username: "selvi1231234124",
-      email: "selvi.ekawati@gmail.com",
-      phoneNumber: "082346187259",
-    },
+    userDetailData,
+    isLoading,
+    error: loadError,
+    refreshUserDetail,
+  } = useUserDetail(userId);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    first_name: "",
+    last_name: "",
+    phone: "",
   });
 
-  const onSave = (data: PersonalInfoFormData) => {
-    console.log("Saving:", data);
-    setIsEditing(false);
+  // Update form data when user detail is loaded
+  useEffect(() => {
+    if (userDetailData?.user) {
+      setFormData({
+        username: userDetailData.user.username,
+        email: userDetailData.user.email,
+        first_name: userDetailData.user.first_name,
+        last_name: userDetailData.user.last_name,
+        phone: userDetailData.user.phone || "",
+      });
+    }
+  }, [userDetailData]);
+
+  const handleInputChange = (field: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
-  const onCancel = () => {
-    setIsEditing(false);
-    reset();
+  const handleSave = async () => {
+    if (!userId || !userDetailData?.user) return;
+
+    try {
+      setIsSaving(true);
+      setSaveError(null);
+      setSuccessMessage(null);
+
+      const updateData: UpdateUserDetailRequest = {
+        username: formData.username,
+        email: formData.email,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        phone: formData.phone || undefined,
+      };
+
+      const response = await userDetailService.updateUserDetail(
+        userId,
+        updateData
+      );
+
+      if (response.success) {
+        setSuccessMessage("Personal information updated successfully");
+        // Refresh user detail data
+        await refreshUserDetail();
+
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setSaveError(
+          response.errors
+            ? Object.values(response.errors).flat().join(", ")
+            : "Failed to update personal information"
+        );
+      }
+    } catch (err) {
+      console.error("Error updating user detail:", err);
+      setSaveError("Failed to update personal information");
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  const handleReset = () => {
+    if (userDetailData?.user) {
+      setFormData({
+        username: userDetailData.user.username,
+        email: userDetailData.user.email,
+        first_name: userDetailData.user.first_name,
+        last_name: userDetailData.user.last_name,
+        phone: userDetailData.user.phone || "",
+      });
+      setSaveError(null);
+      setSuccessMessage(null);
+    }
+  };
+
+  const hasChanges =
+    userDetailData?.user &&
+    (formData.username !== userDetailData.user.username ||
+      formData.email !== userDetailData.user.email ||
+      formData.first_name !== userDetailData.user.first_name ||
+      formData.last_name !== userDetailData.user.last_name ||
+      formData.phone !== (userDetailData.user.phone || ""));
+
+  const displayError = loadError || saveError;
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5 text-blue-600" />
+            Personal Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span className="ml-2">Loading user information...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!userDetailData?.user) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5 text-blue-600" />
+            Personal Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <XCircle className="h-4 w-4" />
+            <AlertDescription>
+              User not found or failed to load user information.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const userDetail = userDetailData.user;
 
   return (
     <Card>
-      <CardHeader className="">
+      <CardHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10  rounded-lg flex items-center justify-center">
-              <User className="h-6 w-6" />
-            </div>
-            <CardTitle>Personal Information</CardTitle>
-          </div>
-
-          <div className="flex gap-2">
-            {isEditing ? (
-              <>
-                <Button variant="outline" size="sm" onClick={onCancel}>
-                  <X className="h-4 w-4 mr-1" />
-                  Cancel
-                </Button>
-                <Button size="sm" onClick={handleSubmit(onSave)}>
-                  <Save className="h-4 w-4 mr-1" />
-                  Save
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditing(true)}
-              >
-                <Edit3 className="h-4 w-4 mr-1" />
-                Edit
-              </Button>
-            )}
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5 text-blue-600" />
+            Personal Information
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Badge variant={userDetail.is_active ? "default" : "destructive"}>
+              {userDetail.is_active ? (
+                <>
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Active
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-3 w-3 mr-1" />
+                  Inactive
+                </>
+              )}
+            </Badge>
           </div>
         </div>
+        <p className="text-sm text-gray-600">
+          Update basic information for this user account
+        </p>
       </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Success Message */}
+        {successMessage && (
+          <Alert variant="default" className="border-green-200 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              {successMessage}
+            </AlertDescription>
+          </Alert>
+        )}
 
-      <CardContent className="p-6 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label>First Name *</Label>
-            <div className="relative">
-              <UserCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                {...register("firstName")}
-                disabled={!isEditing}
-                className="pl-10"
-                placeholder="Enter first name"
-              />
+        {/* Error Message */}
+        {displayError && (
+          <Alert variant="destructive">
+            <XCircle className="h-4 w-4" />
+            <AlertDescription>{displayError}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* User Info Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600">
+              {userDetail.roles_count}
             </div>
-            {errors.firstName && (
-              <p className="text-sm text-red-500">{errors.firstName.message}</p>
-            )}
+            <div className="text-sm text-gray-600">Assigned Roles</div>
           </div>
-
-          <div className="space-y-2">
-            <Label>Last Name *</Label>
-            <div className="relative">
-              <UserCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                {...register("lastName")}
-                disabled={!isEditing}
-                className="pl-10"
-                placeholder="Enter last name"
-              />
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600">
+              {userDetail.applications_count}
             </div>
-            {errors.lastName && (
-              <p className="text-sm text-red-500">{errors.lastName.message}</p>
-            )}
+            <div className="text-sm text-gray-600">Applications</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-purple-600">
+              {userDetail.permissions_count}
+            </div>
+            <div className="text-sm text-gray-600">Permissions</div>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Username *</Label>
-          <div className="relative">
-            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        {/* Form Fields */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Username */}
+          <div className="space-y-2">
+            <Label htmlFor="username">Username *</Label>
             <Input
-              {...register("username")}
-              disabled={!isEditing}
-              className="pl-10"
+              id="username"
+              value={formData.username}
+              onChange={(e) => handleInputChange("username", e.target.value)}
               placeholder="Enter username"
             />
           </div>
-          {errors.username && (
-            <p className="text-sm text-red-500">{errors.username.message}</p>
-          )}
-          <p className="text-xs text-gray-500">
-            Only letters, numbers, and underscores allowed
-          </p>
-        </div>
 
-        <div className="space-y-2">
-          <Label>Email Address *</Label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          {/* Email */}
+          <div className="space-y-2">
+            <Label htmlFor="email">Email Address *</Label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleInputChange("email", e.target.value)}
+                placeholder="Enter email address"
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          {/* First Name */}
+          <div className="space-y-2">
+            <Label htmlFor="first_name">First Name *</Label>
             <Input
-              {...register("email")}
-              type="email"
-              disabled={!isEditing}
-              className="pl-10"
-              placeholder="Enter email address"
+              id="first_name"
+              value={formData.first_name}
+              onChange={(e) => handleInputChange("first_name", e.target.value)}
+              placeholder="Enter first name"
             />
           </div>
-          {errors.email && (
-            <p className="text-sm text-red-500">{errors.email.message}</p>
-          )}
-        </div>
 
-        <div className="space-y-2">
-          <Label>Phone Number</Label>
-          <div className="relative">
-            <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          {/* Last Name */}
+          <div className="space-y-2">
+            <Label htmlFor="last_name">Last Name *</Label>
             <Input
-              {...register("phoneNumber")}
-              type="tel"
-              disabled={!isEditing}
-              className="pl-10"
-              placeholder="Enter phone number"
+              id="last_name"
+              value={formData.last_name}
+              onChange={(e) => handleInputChange("last_name", e.target.value)}
+              placeholder="Enter last name"
             />
           </div>
-          {errors.phoneNumber && (
-            <p className="text-sm text-red-500">{errors.phoneNumber.message}</p>
-          )}
+
+          {/* Phone */}
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone Number</Label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => handleInputChange("phone", e.target.value)}
+                placeholder="Enter phone number"
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          {/* Account Info */}
+          <div className="space-y-2">
+            <Label>Account Information</Label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4 text-gray-400" />
+                <span className="text-gray-600">Created:</span>
+                <span>
+                  {new Date(userDetail.created_at).toLocaleDateString()}
+                </span>
+              </div>
+              {userDetail.last_login_at && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-600">Last Login:</span>
+                  <span>
+                    {new Date(userDetail.last_login_at).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+              {userDetail.email_verified_at ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-green-600">Email Verified</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm">
+                  <XCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-red-600">Email Not Verified</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center justify-end gap-3 pt-6 border-t">
+          <Button
+            variant="outline"
+            onClick={handleReset}
+            disabled={!hasChanges || isSaving}
+          >
+            Reset
+          </Button>
+          <Button onClick={handleSave} disabled={!hasChanges || isSaving}>
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Changes"
+            )}
+          </Button>
         </div>
       </CardContent>
     </Card>

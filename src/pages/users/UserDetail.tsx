@@ -2,12 +2,12 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 
 import DirectAccessPrivilegesSection from "./_components/DirectAccessPrivilegesSection";
-import PersonalInformationSection from "./_components/PersonalInformationSection";
 import RoleAssignmentSection from "./_components/RoleAssignmentSection";
 import SecurityInformationSection from "./_components/SecurityInformationSection";
 import { ArrowLeft, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import UserCreateInfo from "./_components/UserCreateInfo";
+import PersonalInformationSection from "./_components/PersonalInformationSection";
 
 const UserDetail = () => {
   const navigate = useNavigate();
