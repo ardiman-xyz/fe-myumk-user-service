@@ -1,9 +1,15 @@
-import axios, { type AxiosResponse, AxiosError } from "axios";
+// src/config/api.ts - Updated with Auto Token Refresh
+import axios, {
+  type AxiosResponse,
+  AxiosError,
+  type AxiosRequestConfig,
+} from "axios";
+import { tokenManager } from "@/utils/tokenManager";
 
 export const API_CONFIG = {
-  baseURL: "http://0.0.0.0:8080/api/", // hardcode sementara
+  baseURL: "http://0.0.0.0:8080/api/",
   timeout: 5000,
-  enableLogging: true, // set false untuk production
+  enableLogging: true,
 };
 
 const apiClient = axios.create({
@@ -14,19 +20,17 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor - Add auth token and logging
 apiClient.interceptors.request.use(
-  (config) => {
-    // Add auth token if available
-    const token = localStorage.getItem("token-user-service");
+  async (config) => {
+    const token = await tokenManager.getValidAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
     // Logging
     if (API_CONFIG.enableLogging) {
-      console.log("API Request:", config.method?.toUpperCase(), config.url);
-      if (config.data) {
+      console.log("📤 API Request:", config.method?.toUpperCase(), config.url);
+      if (config.data && !config.url?.includes("/auth/")) {
         console.log("Request Data:", config.data);
       }
     }
@@ -35,29 +39,29 @@ apiClient.interceptors.request.use(
   },
   (error) => {
     if (API_CONFIG.enableLogging) {
-      console.error("Request Error:", error);
+      console.error("❌ Request Error:", error);
     }
     return Promise.reject(error);
   }
 );
 
-// Response interceptor - Handle errors and logging
+// Response interceptor - Handle errors, token refresh, and logging
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     if (API_CONFIG.enableLogging) {
-      console.log("API Response:", response.status, response.config.url);
-      if (response.data) {
+      console.log("📥 API Response:", response.status, response.config.url);
+      if (response.data && !response.config.url?.includes("/auth/")) {
         console.log("Response Data:", response.data);
       }
     }
     return response;
   },
-  (error: AxiosError) => {
-    const { response } = error;
+  async (error: AxiosError) => {
+    const { response, config } = error;
 
     // Enhanced error logging
     if (API_CONFIG.enableLogging) {
-      console.error("API Error:", {
+      console.error("❌ API Error:", {
         status: response?.status,
         url: error.config?.url,
         method: error.config?.method?.toUpperCase(),
@@ -66,54 +70,62 @@ apiClient.interceptors.response.use(
       });
     }
 
-    // Handle 403 Forbidden errors
-    if (response?.status === 403) {
+    // Handle 401 Unauthorized - Try token refresh
+    if (response?.status === 401 && config) {
       const responseData = response.data as any;
 
-      // Check if it's INSUFFICIENT_PRIVILEGES error
-      if (responseData?.code === "INSUFFICIENT_PRIVILEGES") {
-        console.warn(
-          "⚠️ INSUFFICIENT_PRIVILEGES: User does not have super admin access"
-        );
-
-        // Clear stored auth data
-        localStorage.removeItem("token-user-service");
-        localStorage.removeItem("user-data");
-
-        // Redirect to unauthorized page
-        window.location.href = "/unauthorized";
+      // Don't retry refresh token endpoint to avoid infinite loop
+      if (
+        config.url?.includes("/auth/refresh-token") ||
+        config.url?.includes("/auth/login")
+      ) {
+        console.warn("⚠️ Auth endpoint failed, redirecting to login");
+        tokenManager.clearTokens();
+        window.location.href = "/login";
         return Promise.reject(error);
       }
 
-      // Handle ACCOUNT_INACTIVE error
-      if (responseData?.code === "ACCOUNT_INACTIVE") {
-        console.warn("⚠️ ACCOUNT_INACTIVE: User account is deactivated");
+      if (responseData?.code === "UNAUTHENTICATED") {
+        console.warn("🔄 Token expired, attempting refresh...");
 
-        // Clear stored auth data
-        localStorage.removeItem("token-user-service");
-        localStorage.removeItem("user-data");
+        try {
+          // Try to refresh token
+          const newToken = await tokenManager.refreshTokenNow();
 
-        // Redirect to account inactive page
-        window.location.href = "/account-inactive";
+          if (newToken && config.headers) {
+            // Retry original request with new token
+            config.headers.Authorization = `Bearer ${newToken}`;
+            console.log("🔄 Retrying request with new token...");
+            return apiClient.request(config);
+          }
+        } catch (refreshError) {
+          console.error("❌ Token refresh failed:", refreshError);
+        }
+
+        // Refresh failed, redirect to login
+        tokenManager.clearTokens();
+        window.location.href = "/login";
         return Promise.reject(error);
       }
     }
 
-    // Handle 401 Unauthorized errors
-    if (response?.status === 401) {
+    // Handle 403 Forbidden errors
+    if (response?.status === 403) {
       const responseData = response.data as any;
 
-      if (responseData?.code === "UNAUTHENTICATED") {
-        console.warn("⚠️ UNAUTHENTICATED: Invalid or expired token");
+      if (responseData?.code === "INSUFFICIENT_PRIVILEGES") {
+        console.warn(
+          "⚠️ INSUFFICIENT_PRIVILEGES: User does not have super admin access"
+        );
+        tokenManager.clearTokens();
+        window.location.href = "/unauthorized";
+        return Promise.reject(error);
+      }
 
-        // Clear stored auth data
-        localStorage.removeItem("token-user-service");
-        localStorage.removeItem("user-data");
-
-        // Redirect to login page only if not already on login page
-        if (!window.location.pathname.includes("/login")) {
-          window.location.href = "/login";
-        }
+      if (responseData?.code === "ACCOUNT_INACTIVE") {
+        console.warn("⚠️ ACCOUNT_INACTIVE: User account is deactivated");
+        tokenManager.clearTokens();
+        window.location.href = "/account-inactive";
         return Promise.reject(error);
       }
     }
@@ -121,9 +133,6 @@ apiClient.interceptors.response.use(
     // Handle network errors
     if (!response) {
       console.error("🚫 Network Error: Please check if the server is running");
-
-      // You can show a toast notification here for network errors
-      // toast.error('Network error. Please check your connection.');
     }
 
     return Promise.reject(error);

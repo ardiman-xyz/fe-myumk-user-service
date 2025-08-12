@@ -5,18 +5,23 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { adminAuthService } from "@/services/authAdmin";
 
 interface User {
   id: number;
-  name: string;
+  username: string;
   email: string;
-  department_id?: number;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  is_super_admin: boolean;
+  last_login_at?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (token: string, user: User) => void;
+  login: (loginData: { access_token: string; user: User }) => void;
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -30,29 +35,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem("token-user-service");
-    const savedUser = localStorage.getItem("user");
+    const accessToken = adminAuthService.getAccessToken();
+    const userData = adminAuthService.getCurrentUser();
 
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
+    if (accessToken && userData) {
+      setToken(accessToken);
+      setUser(userData);
     }
-
     setIsLoading(false);
   }, []);
 
-  const login = (newToken: string, newUser: User) => {
-    setToken(newToken);
-    setUser(newUser);
-    localStorage.setItem("token-user-service", newToken);
-    localStorage.setItem("user", JSON.stringify(newUser));
+  const login = (loginData: { access_token: string; user: User }) => {
+    setToken(loginData.access_token);
+    setUser(loginData.user);
+    // Penyimpanan sudah dilakukan oleh adminAuthService.login
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
-    localStorage.removeItem("token-user-service");
-    localStorage.removeItem("user");
+    adminAuthService.logout();
   };
 
   return (

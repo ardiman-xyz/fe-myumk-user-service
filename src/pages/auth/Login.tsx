@@ -64,11 +64,12 @@ export default function Login() {
 
     try {
       const data = await adminAuthService.login(formData);
+
       if (data.success && data.data) {
-        login(data.data.token, data.data.user);
+        login(data.data);
         setSuccess("Login successful! Redirecting...");
       } else {
-        setError(data.error || data.message || "Login failed");
+        setError("Login failed");
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
@@ -172,8 +173,6 @@ export default function Login() {
               "Sign In "
             )}
           </Button>
-
-        
         </CardFooter>
       </Card>
     </div>
