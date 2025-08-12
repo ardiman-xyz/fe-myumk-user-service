@@ -212,7 +212,6 @@ const UserForm: React.FC<UserFormProps> = ({
 
   const handlePrivilegeChange = (data: PrivilegeData) => {
     setPrivilegeData(data);
-    console.info("Privilege data updated:", data);
   };
 
   return (

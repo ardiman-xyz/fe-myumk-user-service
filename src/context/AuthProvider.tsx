@@ -38,19 +38,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Check if we have valid tokens
-        const validToken = await tokenManager.getValidAccessToken();
-        const userData = adminAuthService.getCurrentUser();
+        // Only initialize if we have tokens
+        const hasTokens =
+          tokenManager.getAccessToken() || tokenManager.getRefreshToken();
 
-        if (validToken && userData) {
-          setToken(validToken);
-          setUser(userData);
-        } else if (tokenManager.isRefreshTokenValid()) {
-          // Try to refresh token
-          const response = await adminAuthService.refreshToken();
-          if (response.success && response.data) {
-            setToken(response.data.access_token);
-            setUser(response.data.user);
+        if (hasTokens) {
+          // Initialize auto-refresh for existing tokens
+          tokenManager.initializeAutoRefresh();
+
+          // Check if we have valid tokens
+          const validToken = await tokenManager.getValidAccessToken();
+          const userData = adminAuthService.getCurrentUser();
+
+          if (validToken && userData) {
+            setToken(validToken);
+            setUser(userData);
+          } else if (tokenManager.isRefreshTokenValid()) {
+            // Try to refresh token
+            const response = await adminAuthService.refreshToken();
+            if (response.success && response.data) {
+              setToken(response.data.access_token);
+              setUser(response.data.user);
+            }
           }
         }
       } catch (error) {
@@ -68,6 +77,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = (loginData: { access_token: string; user: User }) => {
     setToken(loginData.access_token);
     setUser(loginData.user);
+
+    // Initialize auto-refresh after successful login
+    tokenManager.initializeAutoRefresh();
   };
 
   const logout = async () => {

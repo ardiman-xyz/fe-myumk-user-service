@@ -65,7 +65,6 @@ const RoleSelector: React.FC<RoleSelectorProps> = ({
 
     try {
       const response = await roleService.getRoles();
-      console.info("Fetched roles:", response);
       setRoles(response.data || []);
       setIsLoading(false);
     } catch (error) {

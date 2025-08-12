@@ -7,8 +7,7 @@ class TokenManager {
   private refreshSubscribers: Array<(token: string | null) => void> = [];
 
   private constructor() {
-    // Initialize auto-refresh when class is instantiated
-    this.initializeAutoRefresh();
+    // Don't auto-initialize, let AuthProvider handle it
   }
 
   public static getInstance(): TokenManager {
@@ -29,6 +28,19 @@ class TokenManager {
     localStorage.setItem("refresh_token", refreshToken);
     localStorage.setItem("access_expires_at", accessExpiresAt);
     localStorage.setItem("refresh_expires_at", refreshExpiresAt);
+
+    console.log("🔐 TOKENS STORED", {
+      access_expires_at: new Date(accessExpiresAt).toLocaleString(),
+      refresh_expires_at: new Date(refreshExpiresAt).toLocaleString(),
+      time_until_access_expiry:
+        Math.round(
+          (new Date(accessExpiresAt).getTime() - Date.now()) / 1000 / 60
+        ) + " minutes",
+      time_until_refresh_expiry:
+        Math.round(
+          (new Date(refreshExpiresAt).getTime() - Date.now()) / 1000 / 60 / 60
+        ) + " hours",
+    });
 
     // Restart auto-refresh timer
     this.scheduleTokenRefresh();
@@ -65,7 +77,7 @@ class TokenManager {
     }
   }
 
-  // Check if access token is valid
+  // Check if access token is valid (5 minutes buffer)
   public isAccessTokenValid(): boolean {
     const token = this.getAccessToken();
     const expiresAt = this.getAccessExpiresAt();
@@ -74,11 +86,24 @@ class TokenManager {
       return false;
     }
 
-    // Add 5 minute buffer
+    // Refresh 5 minutes before expiry for production
     const now = new Date();
-    const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
+    const bufferTime = 5 * 60 * 1000; // 5 minutes buffer
 
-    return expiresAt.getTime() > now.getTime() + bufferTime;
+    const isValid = expiresAt.getTime() > now.getTime() + bufferTime;
+
+    if (!isValid) {
+      console.log("⚠️ ACCESS TOKEN NEAR EXPIRY", {
+        expires_at: expiresAt.toLocaleString(),
+        current_time: now.toLocaleString(),
+        minutes_until_expiry: Math.round(
+          (expiresAt.getTime() - now.getTime()) / 1000 / 60
+        ),
+        buffer_minutes: bufferTime / 1000 / 60,
+      });
+    }
+
+    return isValid;
   }
 
   // Check if refresh token is valid
@@ -91,24 +116,37 @@ class TokenManager {
     }
 
     const now = new Date();
-    return expiresAt.getTime() > now.getTime();
+    const isValid = expiresAt.getTime() > now.getTime();
+
+    if (!isValid) {
+      console.log("❌ REFRESH TOKEN EXPIRED", {
+        expires_at: expiresAt.toLocaleString(),
+        current_time: now.toLocaleString(),
+      });
+    }
+
+    return isValid;
   }
 
   // Initialize auto-refresh when app starts
   public initializeAutoRefresh(): void {
+    const hasTokens = this.getAccessToken() || this.getRefreshToken();
+
+    if (!hasTokens) {
+      return; // Don't log errors if no tokens exist yet
+    }
+
     // Check if we have valid tokens
     if (this.isAccessTokenValid()) {
       this.scheduleTokenRefresh();
     } else if (this.isRefreshTokenValid()) {
-      // Access token expired but refresh token still valid
       this.refreshTokenNow();
     } else {
-      // Both tokens expired, clear storage
       this.clearTokens();
     }
   }
 
-  // Schedule auto-refresh before token expires
+  // Schedule auto-refresh before token expires (5 minutes buffer)
   private scheduleTokenRefresh(): void {
     if (this.refreshTimer) {
       clearTimeout(this.refreshTimer);
@@ -120,14 +158,8 @@ class TokenManager {
     const now = new Date();
     const timeUntilExpiry = expiresAt.getTime() - now.getTime();
 
-    // Refresh 30 minutes before expiry (or immediately if less than 30 minutes left)
-    const refreshTime = Math.max(timeUntilExpiry - 30 * 60 * 1000, 1000);
-
-    console.log(
-      `🔄 Token refresh scheduled in ${Math.round(
-        refreshTime / 1000 / 60
-      )} minutes`
-    );
+    // Refresh 5 minutes before expiry for production
+    const refreshTime = Math.max(timeUntilExpiry - 5 * 60 * 1000, 1000);
 
     this.refreshTimer = setTimeout(() => {
       this.refreshTokenNow();
@@ -137,7 +169,6 @@ class TokenManager {
   // Refresh token immediately
   public async refreshTokenNow(): Promise<string | null> {
     if (this.isRefreshing) {
-      // If already refreshing, wait for the result
       return new Promise((resolve) => {
         this.refreshSubscribers.push(resolve);
       });
@@ -152,8 +183,6 @@ class TokenManager {
         throw new Error("No refresh token available");
       }
 
-      console.log("🔄 Refreshing access token...");
-
       const response = await fetch(`${API_CONFIG.baseURL}/auth/refresh-token`, {
         method: "POST",
         headers: {
@@ -167,6 +196,12 @@ class TokenManager {
 
       const data = await response.json();
 
+      console.log("📡 REFRESH RESPONSE", {
+        status: response.status,
+        success: data.success,
+        message: data.message,
+      });
+
       if (data.success && data.data) {
         // Store new tokens
         this.setTokens(
@@ -176,7 +211,7 @@ class TokenManager {
           data.data.refresh_expires_at
         );
 
-        console.log("✅ Token refreshed successfully");
+        console.log("✅ TOKEN REFRESH SUCCESS");
 
         // Notify all waiting subscribers
         this.refreshSubscribers.forEach((callback) =>
@@ -189,7 +224,7 @@ class TokenManager {
         throw new Error(data.message || "Token refresh failed");
       }
     } catch (error) {
-      console.error("❌ Token refresh failed:", error);
+      console.error("❌ TOKEN REFRESH FAILED", error);
 
       // Clear tokens and redirect to login
       this.clearTokens();
@@ -200,6 +235,7 @@ class TokenManager {
 
       // Redirect to login if not already there
       if (!window.location.pathname.includes("/login")) {
+        console.log("🔀 Redirecting to login...");
         window.location.href = "/login";
       }
 
@@ -211,9 +247,18 @@ class TokenManager {
 
   // Get valid access token (with auto-refresh if needed)
   public async getValidAccessToken(): Promise<string | null> {
-    if (this.isAccessTokenValid()) {
-      return this.getAccessToken();
+    const accessToken = this.getAccessToken();
+
+    // If no access token exists, don't try to refresh
+    if (!accessToken) {
+      return null;
     }
+
+    if (this.isAccessTokenValid()) {
+      return accessToken;
+    }
+
+    console.log("⚠️ Access token invalid, attempting refresh...");
 
     // Token expired, try to refresh
     if (this.isRefreshTokenValid()) {
@@ -221,13 +266,105 @@ class TokenManager {
     }
 
     // Both tokens expired
+    console.log("❌ Both tokens expired");
     this.clearTokens();
     return null;
+  }
+
+  // Debug method to check token status
+  public getTokenStatus(): {
+    hasAccessToken: boolean;
+    hasRefreshToken: boolean;
+    accessTokenValid: boolean;
+    refreshTokenValid: boolean;
+    accessExpiresAt: Date | null;
+    refreshExpiresAt: Date | null;
+    minutesUntilAccessExpiry: number | null;
+    hoursUntilRefreshExpiry: number | null;
+  } {
+    const accessExpiresAt = this.getAccessExpiresAt();
+    const refreshExpiresAt = this.getRefreshExpiresAt();
+    const now = new Date();
+
+    return {
+      hasAccessToken: !!this.getAccessToken(),
+      hasRefreshToken: !!this.getRefreshToken(),
+      accessTokenValid: this.isAccessTokenValid(),
+      refreshTokenValid: this.isRefreshTokenValid(),
+      accessExpiresAt,
+      refreshExpiresAt,
+      minutesUntilAccessExpiry: accessExpiresAt
+        ? Math.round((accessExpiresAt.getTime() - now.getTime()) / 1000 / 60)
+        : null,
+      hoursUntilRefreshExpiry: refreshExpiresAt
+        ? Math.round(
+            (refreshExpiresAt.getTime() - now.getTime()) / 1000 / 60 / 60
+          )
+        : null,
+    };
+  }
+
+  // 🔧 TESTING METHOD: Force refresh for testing
+  public forceRefresh(): Promise<string | null> {
+    console.log("🔧 FORCE REFRESH TRIGGERED FOR TESTING");
+    return this.refreshTokenNow();
+  }
+
+  // 🔧 TESTING METHOD: Override buffer time for quick testing
+  public setTestingMode(bufferSeconds: number = 30): void {
+    console.log(
+      `🔧 TESTING MODE: Token will refresh ${bufferSeconds} seconds before expiry`
+    );
+
+    // Override the isAccessTokenValid method for testing
+    this.isAccessTokenValid = () => {
+      const token = this.getAccessToken();
+      const expiresAt = this.getAccessExpiresAt();
+
+      if (!token || !expiresAt) {
+        return false;
+      }
+
+      const now = new Date();
+      const bufferTime = bufferSeconds * 1000;
+      const isValid = expiresAt.getTime() > now.getTime() + bufferTime;
+
+      if (!isValid) {
+        console.log("⚠️ ACCESS TOKEN NEAR EXPIRY (TESTING MODE)", {
+          expires_at: expiresAt.toLocaleString(),
+          current_time: now.toLocaleString(),
+          seconds_until_expiry: Math.round(
+            (expiresAt.getTime() - now.getTime()) / 1000
+          ),
+          buffer_seconds: bufferSeconds,
+        });
+      }
+
+      return isValid;
+    };
+
+    // Re-schedule refresh with new buffer
+    if (this.getAccessToken()) {
+      this.scheduleTokenRefresh();
+    }
   }
 }
 
 // Export singleton instance
 export const tokenManager = TokenManager.getInstance();
 
-// Initialize token manager when module loads
-tokenManager.initializeAutoRefresh();
+// Global methods for testing in console
+declare global {
+  interface Window {
+    tokenManager: typeof tokenManager;
+    testTokenRefresh: () => Promise<string | null>;
+    setTestingMode: (seconds?: number) => void;
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.tokenManager = tokenManager;
+  window.testTokenRefresh = () => tokenManager.forceRefresh();
+  window.setTestingMode = (seconds = 30) =>
+    tokenManager.setTestingMode(seconds);
+}

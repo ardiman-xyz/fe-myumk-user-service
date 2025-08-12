@@ -38,8 +38,6 @@ const RoleForm: React.FC<RoleFormProps> = ({
   initialData = {},
   mode = "create",
 }) => {
-  console.info("RoleForm initialized", { mode, initialData });
-
   const [formData, setFormData] = useState<CreateRoleFormData>({
     name: "",
     code: "",

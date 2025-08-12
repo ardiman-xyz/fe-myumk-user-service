@@ -1,4 +1,4 @@
-// src/config/api.ts - Updated with Auto Token Refresh
+// src/config/api.ts - Fixed Auto Token Refresh
 import axios, {
   type AxiosResponse,
   AxiosError,
@@ -22,9 +22,14 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   async (config) => {
-    const token = await tokenManager.getValidAccessToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Only try to get token if we already have one stored
+    const hasStoredToken = !!tokenManager.getAccessToken();
+
+    if (hasStoredToken) {
+      const token = await tokenManager.getValidAccessToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
 
     // Logging
@@ -81,11 +86,17 @@ apiClient.interceptors.response.use(
       ) {
         console.warn("⚠️ Auth endpoint failed, redirecting to login");
         tokenManager.clearTokens();
-        window.location.href = "/login";
+        if (!window.location.pathname.includes("/login")) {
+          window.location.href = "/login";
+        }
         return Promise.reject(error);
       }
 
-      if (responseData?.code === "UNAUTHENTICATED") {
+      // Only try to refresh if we have a refresh token
+      if (
+        tokenManager.getRefreshToken() &&
+        responseData?.code === "UNAUTHENTICATED"
+      ) {
         console.warn("🔄 Token expired, attempting refresh...");
 
         try {
@@ -104,7 +115,9 @@ apiClient.interceptors.response.use(
 
         // Refresh failed, redirect to login
         tokenManager.clearTokens();
-        window.location.href = "/login";
+        if (!window.location.pathname.includes("/login")) {
+          window.location.href = "/login";
+        }
         return Promise.reject(error);
       }
     }
