@@ -1,4 +1,5 @@
 import apiClient from "@/config/api";
+import { tokenManager } from "@/utils/tokenManager";
 
 export interface Permission {
   id: number;
@@ -68,8 +69,8 @@ export interface PermissionStats {
 }
 
 class PermissionService {
-  private getAuthHeaders() {
-    const token = localStorage.getItem("token-user-service");
+  private async getAuthHeaders() {
+    const token = await tokenManager.getValidAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
@@ -90,7 +91,7 @@ class PermissionService {
 
       const response = await apiClient.get<ApiResponse<Permission[]>>(
         `/permissions?${params.toString()}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -109,7 +110,7 @@ class PermissionService {
     try {
       const response = await apiClient.get<ApiResponse<Permission>>(
         `/permissions/${id}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -131,7 +132,7 @@ class PermissionService {
       const response = await apiClient.post<ApiResponse<Permission>>(
         "/permissions",
         permissionData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -154,7 +155,7 @@ class PermissionService {
       const response = await apiClient.put<ApiResponse<Permission>>(
         `/permissions/${id}`,
         permissionData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -173,7 +174,7 @@ class PermissionService {
     try {
       const response = await apiClient.delete<ApiResponse<null>>(
         `/permissions/${id}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -195,7 +196,7 @@ class PermissionService {
     try {
       const response = await apiClient.get<ApiResponse<Permission[]>>(
         `/permissions/search?q=${encodeURIComponent(query)}&limit=${limit}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -216,7 +217,7 @@ class PermissionService {
     try {
       const response = await apiClient.get<ApiResponse<Permission[]>>(
         `/permissions/resource/${resource}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -237,7 +238,7 @@ class PermissionService {
     try {
       const response = await apiClient.get<ApiResponse<Permission[]>>(
         `/permissions/action/${action}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -256,7 +257,7 @@ class PermissionService {
     try {
       const response = await apiClient.get<ApiResponse<PermissionStats>>(
         "/permissions/stats",
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -275,7 +276,7 @@ class PermissionService {
     try {
       const response = await apiClient.get<ApiResponse<string[]>>(
         "/permissions/resources",
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -294,7 +295,7 @@ class PermissionService {
     try {
       const response = await apiClient.get<ApiResponse<string[]>>(
         "/permissions/actions",
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -321,7 +322,7 @@ class PermissionService {
 
       const response = await apiClient.get<ApiResponse<{ available: boolean }>>(
         `/permissions/check-code?${params.toString()}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -344,7 +345,7 @@ class PermissionService {
       const response = await apiClient.post<ApiResponse<Permission[]>>(
         "/permissions/generate-crud",
         { resource, resource_display_name: resourceDisplayName },
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -371,7 +372,7 @@ class PermissionService {
       const response = await apiClient.get(
         `/permissions/export?${params.toString()}`,
         {
-          headers: this.getAuthHeaders(),
+          headers: await this.getAuthHeaders(), // ← ADD await
           responseType: "blob",
         }
       );
@@ -381,7 +382,6 @@ class PermissionService {
       throw new Error("Failed to export permissions");
     }
   }
-
   /**
    * Import permissions from CSV
    */
@@ -392,11 +392,12 @@ class PermissionService {
       const formData = new FormData();
       formData.append("file", file);
 
+      const authHeaders = await this.getAuthHeaders(); // ← GET headers first
       const response = await apiClient.post<
         ApiResponse<{ imported: number; errors: string[] }>
       >("/permissions/import", formData, {
         headers: {
-          ...this.getAuthHeaders(),
+          ...authHeaders, // ← SPREAD the resolved headers
           "Content-Type": "multipart/form-data",
         },
       });

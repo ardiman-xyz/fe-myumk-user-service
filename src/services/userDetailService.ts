@@ -5,6 +5,7 @@ import type {
   UpdateUserDetailRequest,
   UserDetail,
 } from "@/types/userDetail";
+import { tokenManager } from "@/utils/tokenManager";
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -14,8 +15,8 @@ export interface ApiResponse<T> {
 }
 
 class UserDetailService {
-  private getAuthHeaders() {
-    const token = localStorage.getItem("token-user-service");
+  private async getAuthHeaders() {
+    const token = await tokenManager.getValidAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
@@ -26,7 +27,7 @@ class UserDetailService {
     try {
       const response = await apiClient.get<UserDetailApiResponse>(
         `/users/${id}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -49,7 +50,7 @@ class UserDetailService {
       const response = await apiClient.put<ApiResponse<UserDetail>>(
         `/users/${id}`,
         userData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -72,7 +73,7 @@ class UserDetailService {
       const response = await apiClient.patch<ApiResponse<UserDetail>>(
         `/users/${id}/account-security`,
         securityData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -102,7 +103,7 @@ class UserDetailService {
       const response = await apiClient.patch<ApiResponse<any>>(
         `/users/${userId}/privileges`,
         privilegeData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -113,6 +114,7 @@ class UserDetailService {
       throw new Error("Failed to manage privileges");
     }
   }
+
   async manageRoles(
     userId: number,
     roleData: {
@@ -126,7 +128,7 @@ class UserDetailService {
       const response = await apiClient.patch<ApiResponse<any>>(
         `/users/${userId}/roles`,
         roleData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -137,12 +139,13 @@ class UserDetailService {
       throw new Error("Failed to manage roles");
     }
   }
+
   async toggleUserStatus(id: number): Promise<ApiResponse<UserDetail>> {
     try {
       const response = await apiClient.patch<ApiResponse<UserDetail>>(
         `/users/${id}/toggle-status`,
         {},
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -166,7 +169,7 @@ class UserDetailService {
       const response = await apiClient.post<ApiResponse<null>>(
         `/users/${userId}/roles`,
         { role_id: roleId, expires_at: expiresAt },
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -185,7 +188,7 @@ class UserDetailService {
     try {
       const response = await apiClient.delete<ApiResponse<null>>(
         `/users/${userId}/roles/${roleId}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -214,7 +217,7 @@ class UserDetailService {
           expires_at: expiresAt,
           notes,
         },
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -236,7 +239,7 @@ class UserDetailService {
     try {
       const response = await apiClient.delete<ApiResponse<null>>(
         `/users/${userId}/applications/${applicationId}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -265,7 +268,7 @@ class UserDetailService {
           expires_at: expiresAt,
           notes,
         },
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -287,7 +290,7 @@ class UserDetailService {
     try {
       const response = await apiClient.delete<ApiResponse<null>>(
         `/users/${userId}/permissions/${permissionId}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;

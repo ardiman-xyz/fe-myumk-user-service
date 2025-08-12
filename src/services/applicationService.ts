@@ -11,10 +11,11 @@ import type {
   Role,
   Menu,
 } from "@/types/application";
+import { tokenManager } from "@/utils/tokenManager";
 
 class ApplicationService {
-  private getAuthHeaders() {
-    const token = localStorage.getItem("token-user-service");
+  private async getAuthHeaders() {
+    const token = await tokenManager.getValidAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
@@ -35,7 +36,7 @@ class ApplicationService {
 
       const response = await apiClient.get<ApiResponse<Application[]>>(
         `/applications?${params.toString()}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -54,7 +55,7 @@ class ApplicationService {
     try {
       const response = await apiClient.get<ApiResponse<Application>>(
         `/applications/${id}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -76,7 +77,7 @@ class ApplicationService {
       const response = await apiClient.post<ApiResponse<Application>>(
         "/applications",
         applicationData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -99,7 +100,7 @@ class ApplicationService {
       const response = await apiClient.put<ApiResponse<Application>>(
         `/applications/${id}`,
         applicationData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -118,7 +119,7 @@ class ApplicationService {
     try {
       const response = await apiClient.delete<ApiResponse<null>>(
         `/applications/${id}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -138,7 +139,7 @@ class ApplicationService {
       const response = await apiClient.patch<ApiResponse<Application>>(
         `/applications/${id}/toggle-status`,
         {},
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -160,7 +161,7 @@ class ApplicationService {
     try {
       const response = await apiClient.get<ApiResponse<Application[]>>(
         `/applications/search?q=${encodeURIComponent(query)}&limit=${limit}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -179,7 +180,7 @@ class ApplicationService {
     try {
       const response = await apiClient.get<ApiResponse<Application[]>>(
         "/applications/active",
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -200,7 +201,7 @@ class ApplicationService {
     try {
       const response = await apiClient.get<ApiResponse<Application[]>>(
         "/applications/active-permission",
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -219,7 +220,7 @@ class ApplicationService {
     try {
       const response = await apiClient.get<ApiResponse<ApplicationStats>>(
         "/applications/stats",
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -238,7 +239,7 @@ class ApplicationService {
     try {
       const response = await apiClient.get<ApiResponse<Application>>(
         `/applications/${id}/roles`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -261,7 +262,7 @@ class ApplicationService {
       const response = await apiClient.post<ApiResponse<Application>>(
         `/applications/${id}/roles`,
         data,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -285,7 +286,7 @@ class ApplicationService {
         `/applications/${id}/roles`,
         {
           data,
-          headers: this.getAuthHeaders(),
+          headers: await this.getAuthHeaders(),
         }
       );
 
@@ -305,7 +306,7 @@ class ApplicationService {
     try {
       const response = await apiClient.get<ApiResponse<Menu[]>>(
         `/applications/${id}/menus`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -332,7 +333,7 @@ class ApplicationService {
 
       const response = await apiClient.get<ApiResponse<{ available: boolean }>>(
         `/applications/check-code?${params.toString()}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -355,7 +356,7 @@ class ApplicationService {
       const response = await apiClient.post<ApiResponse<Application>>(
         `/applications/${id}/duplicate`,
         data,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;

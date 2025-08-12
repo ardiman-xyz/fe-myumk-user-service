@@ -13,10 +13,11 @@ import type {
   User,
 } from "@/types/role";
 import type { RoleEditResponse } from "@/types/roleEditTypes";
+import { tokenManager } from "@/utils/tokenManager";
 
 class RoleService {
-  private getAuthHeaders() {
-    const token = localStorage.getItem("token-user-service");
+  private async getAuthHeaders() {
+    const token = await tokenManager.getValidAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
@@ -35,7 +36,7 @@ class RoleService {
 
       const response = await apiClient.get<ApiResponse<Role[]>>(
         `/roles?${params.toString()}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -55,7 +56,7 @@ class RoleService {
       const response = await apiClient.get<ApiResponse<RoleEditResponse>>(
         `/roles/${id}`,
         {
-          headers: this.getAuthHeaders(),
+          headers: await this.getAuthHeaders(),
         }
       );
 
@@ -76,7 +77,7 @@ class RoleService {
       const response = await apiClient.post<ApiResponse<Role>>(
         "/roles",
         roleData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -99,7 +100,7 @@ class RoleService {
       const response = await apiClient.put<ApiResponse<Role>>(
         `/roles/${id}`,
         roleData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -118,7 +119,7 @@ class RoleService {
     try {
       const response = await apiClient.delete<ApiResponse<null>>(
         `/roles/${id}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -138,7 +139,7 @@ class RoleService {
       const response = await apiClient.patch<ApiResponse<Role>>(
         `/roles/${id}/toggle-status`,
         {},
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -160,7 +161,7 @@ class RoleService {
     try {
       const response = await apiClient.get<ApiResponse<Role[]>>(
         `/roles/search?q=${encodeURIComponent(query)}&limit=${limit}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -179,7 +180,7 @@ class RoleService {
     try {
       const response = await apiClient.get<ApiResponse<Role[]>>(
         "/roles/active",
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -198,7 +199,7 @@ class RoleService {
     try {
       const response = await apiClient.get<ApiResponse<Role[]>>(
         "/roles/admin",
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -217,7 +218,7 @@ class RoleService {
     try {
       const response = await apiClient.get<ApiResponse<RoleStats>>(
         "/roles/stats",
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -236,7 +237,7 @@ class RoleService {
     try {
       const response = await apiClient.get<ApiResponse<Role>>(
         `/roles/${id}/permissions`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -259,7 +260,7 @@ class RoleService {
       const response = await apiClient.post<ApiResponse<Role>>(
         `/roles/${id}/permissions`,
         data,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -283,7 +284,7 @@ class RoleService {
         `/roles/${id}/permissions`,
         {
           data,
-          headers: this.getAuthHeaders(),
+          headers: await this.getAuthHeaders(),
         }
       );
 
@@ -303,7 +304,7 @@ class RoleService {
     try {
       const response = await apiClient.get<ApiResponse<User[]>>(
         `/roles/${id}/users`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -326,7 +327,7 @@ class RoleService {
       const response = await apiClient.post<ApiResponse<Role>>(
         `/roles/${id}/users`,
         data,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -350,7 +351,7 @@ class RoleService {
         `/roles/${id}/users`,
         {
           data: { user_ids: data.user_ids },
-          headers: this.getAuthHeaders(),
+          headers: await this.getAuthHeaders(),
         }
       );
 
@@ -374,7 +375,7 @@ class RoleService {
       const response = await apiClient.post<ApiResponse<Role>>(
         `/roles/${id}/duplicate`,
         data,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;

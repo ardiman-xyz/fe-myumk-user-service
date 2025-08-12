@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { adminAuthService } from "@/services/authAdmin";
+import { tokenManager } from "@/utils/tokenManager";
 
 interface User {
   id: number;
@@ -35,26 +36,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const accessToken = adminAuthService.getAccessToken();
-    const userData = adminAuthService.getCurrentUser();
+    const initializeAuth = async () => {
+      try {
+        // Check if we have valid tokens
+        const validToken = await tokenManager.getValidAccessToken();
+        const userData = adminAuthService.getCurrentUser();
 
-    if (accessToken && userData) {
-      setToken(accessToken);
-      setUser(userData);
-    }
-    setIsLoading(false);
+        if (validToken && userData) {
+          setToken(validToken);
+          setUser(userData);
+        } else if (tokenManager.isRefreshTokenValid()) {
+          // Try to refresh token
+          const response = await adminAuthService.refreshToken();
+          if (response.success && response.data) {
+            setToken(response.data.access_token);
+            setUser(response.data.user);
+          }
+        }
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+        // Clear any invalid data
+        adminAuthService.clearAuthData();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   const login = (loginData: { access_token: string; user: User }) => {
     setToken(loginData.access_token);
     setUser(loginData.user);
-    // Penyimpanan sudah dilakukan oleh adminAuthService.login
   };
 
-  const logout = () => {
+  const logout = async () => {
     setToken(null);
     setUser(null);
-    adminAuthService.logout();
+    await adminAuthService.logout();
   };
 
   return (
@@ -64,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         token,
         login,
         logout,
-        isAuthenticated: !!token,
+        isAuthenticated: !!token && !!user,
         isLoading,
       }}
     >

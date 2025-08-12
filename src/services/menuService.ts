@@ -1,4 +1,5 @@
 import apiClient from "@/config/api";
+import { tokenManager } from "@/utils/tokenManager";
 
 export interface Menu {
   id: number;
@@ -83,8 +84,8 @@ export interface MenuOrderUpdate {
 }
 
 class MenuService {
-  private getAuthHeaders() {
-    const token = localStorage.getItem("token-user-service");
+  private async getAuthHeaders() {
+    const token = await tokenManager.getValidAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
@@ -103,7 +104,7 @@ class MenuService {
 
       const response = await apiClient.get<ApiResponse<Menu[]>>(
         `/menus?${params.toString()}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -121,7 +122,7 @@ class MenuService {
   async getMenuById(id: number): Promise<ApiResponse<Menu>> {
     try {
       const response = await apiClient.get<ApiResponse<Menu>>(`/menus/${id}`, {
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(), // ← ADD await
       });
 
       return response.data;
@@ -141,7 +142,7 @@ class MenuService {
       const response = await apiClient.post<ApiResponse<Menu>>(
         "/menus",
         menuData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -164,7 +165,7 @@ class MenuService {
       const response = await apiClient.put<ApiResponse<Menu>>(
         `/menus/${id}`,
         menuData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -183,7 +184,7 @@ class MenuService {
     try {
       const response = await apiClient.delete<ApiResponse<null>>(
         `/menus/${id}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -203,7 +204,7 @@ class MenuService {
       const response = await apiClient.patch<ApiResponse<Menu>>(
         `/menus/${id}/toggle-status`,
         {},
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -223,7 +224,7 @@ class MenuService {
       const params = applicationId ? `?application_id=${applicationId}` : "";
       const response = await apiClient.get<ApiResponse<Menu[]>>(
         `/menus/tree${params}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -244,7 +245,7 @@ class MenuService {
     try {
       const response = await apiClient.get<ApiResponse<Menu[]>>(
         `/menus/application/${applicationId}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -272,7 +273,7 @@ class MenuService {
 
       const response = await apiClient.get<ApiResponse<Menu[]>>(
         `/menus/search?${params.toString()}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -299,7 +300,7 @@ class MenuService {
 
       const response = await apiClient.get<ApiResponse<Menu[]>>(
         `/menus/parent-options?${params.toString()}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -319,7 +320,7 @@ class MenuService {
       const response = await apiClient.post<ApiResponse<null>>(
         "/menus/update-order",
         { menus },
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -350,7 +351,7 @@ class MenuService {
 
       const response = await apiClient.get<ApiResponse<{ available: boolean }>>(
         `/menus/check-code?${params.toString()}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -378,7 +379,7 @@ class MenuService {
       const response = await apiClient.get(
         `/menus/export?${params.toString()}`,
         {
-          headers: this.getAuthHeaders(),
+          headers: await this.getAuthHeaders(),
           responseType: "blob",
         }
       );
@@ -392,6 +393,9 @@ class MenuService {
   /**
    * Import menus from file
    */
+  /**
+   * Import menus from file
+   */
   async importMenus(
     file: File,
     applicationId: number
@@ -401,11 +405,12 @@ class MenuService {
       formData.append("file", file);
       formData.append("application_id", applicationId.toString());
 
+      const authHeaders = await this.getAuthHeaders(); // ← GET headers first
       const response = await apiClient.post<
         ApiResponse<{ imported: number; errors: string[] }>
       >("/menus/import", formData, {
         headers: {
-          ...this.getAuthHeaders(),
+          ...authHeaders, // ← SPREAD the resolved headers
           "Content-Type": "multipart/form-data",
         },
       });
@@ -430,7 +435,7 @@ class MenuService {
       const response = await apiClient.post<ApiResponse<Menu>>(
         `/menus/${menuId}/duplicate`,
         newData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;

@@ -1,7 +1,7 @@
 // src/services/userService.ts
 import apiClient from "@/config/api";
-import type { Role } from "@/types/role";
 import type { User } from "@/types/user";
+import { tokenManager } from "@/utils/tokenManager";
 
 // ================================
 // TYPES & INTERFACES
@@ -65,8 +65,8 @@ export interface ApiResponse<T> {
 // ================================
 
 class UserService {
-  private getAuthHeaders() {
-    const token = localStorage.getItem("token-user-service");
+  private async getAuthHeaders() {
+    const token = await tokenManager.getValidAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
@@ -85,7 +85,7 @@ class UserService {
 
       const response = await apiClient.get<ApiResponse<User[]>>(
         `/users?${params.toString()}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -103,7 +103,7 @@ class UserService {
   async getUserById(id: number): Promise<ApiResponse<User>> {
     try {
       const response = await apiClient.get<ApiResponse<User>>(`/users/${id}`, {
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       return response.data;
@@ -123,7 +123,7 @@ class UserService {
       const response = await apiClient.post<ApiResponse<User>>(
         "/users",
         userData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -146,7 +146,7 @@ class UserService {
       const response = await apiClient.put<ApiResponse<User>>(
         `/users/${id}`,
         userData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -165,7 +165,7 @@ class UserService {
     try {
       const response = await apiClient.delete<ApiResponse<null>>(
         `/users/${id}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -185,7 +185,7 @@ class UserService {
       const response = await apiClient.patch<ApiResponse<User>>(
         `/users/${id}/toggle-status`,
         {},
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -207,7 +207,7 @@ class UserService {
     try {
       const response = await apiClient.get<ApiResponse<User[]>>(
         `/users/search?q=${encodeURIComponent(query)}&limit=${limit}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -226,7 +226,7 @@ class UserService {
     try {
       const response = await apiClient.get<ApiResponse<User[]>>(
         "/users/active",
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;
@@ -249,7 +249,7 @@ class UserService {
       const response = await apiClient.patch<ApiResponse<User>>(
         `/users/${id}/reset-password`,
         { password },
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
 
       return response.data;

@@ -4,10 +4,11 @@ import type {
   RoleEditApiRequest,
   ApplicationWithChecked,
 } from "@/types/roleEditTypes";
+import { tokenManager } from "@/utils/tokenManager";
 
 export class RoleEditService {
-  private getAuthHeaders() {
-    const token = localStorage.getItem("token-user-service");
+  private async getAuthHeaders() {
+    const token = await tokenManager.getValidAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
@@ -26,7 +27,7 @@ export class RoleEditService {
         message: string;
         data: RoleEditResponse;
       }>(`/roles/${id}`, {
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       return response.data;
@@ -53,7 +54,7 @@ export class RoleEditService {
         message: string;
         data: ApplicationWithChecked[];
       }>("/roles/applications-for-create", {
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       return response.data;
@@ -83,7 +84,7 @@ export class RoleEditService {
         message: string;
         data: RoleEditResponse;
       }>(`/roles/${id}`, data, {
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       return response.data;
@@ -110,7 +111,7 @@ export class RoleEditService {
         message: string;
         data: RoleEditResponse;
       }>("/roles", data, {
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
       });
 
       return response.data;
