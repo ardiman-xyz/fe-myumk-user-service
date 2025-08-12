@@ -237,15 +237,6 @@ const UserListTable: React.FC<UserListTableProps> = ({
                         </DropdownMenuItem>
 
                         <DropdownMenuItem
-                          onClick={() => onUserAction("edit", user.id)}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit User
-                        </DropdownMenuItem>
-
-                        <DropdownMenuSeparator />
-
-                        <DropdownMenuItem
                           onClick={() => onUserAction("toggle-status", user.id)}
                           className={
                             user.is_active

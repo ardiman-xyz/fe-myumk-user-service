@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  KeyRound,
   Search,
   Loader2,
   CheckCircle,
@@ -16,11 +15,6 @@ import {
 } from "lucide-react";
 import { useUserDetail } from "@/hooks/useUserDetail";
 import { userDetailService } from "@/services/userDetailService";
-import type {
-  Application,
-  ApplicationPermission,
-  MenuPermission,
-} from "@/types/userDetail";
 import { toast } from "sonner";
 
 interface Permission {
